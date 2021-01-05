@@ -112,7 +112,7 @@ Assuming that you have `git` installed,
 
 ## Assignments
 
-Register your github account at https://signin-apd27wnqlq-uw.a.run.app/sta141b/
+Link your github account at https://signin-apd27wnqlq-uw.a.run.app/sta141b/
 
 Check regularly the course github organization https://github.com/ucdavis-sta141b-2021-winter for any newly posted assignments.
 
