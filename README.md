@@ -91,8 +91,8 @@
 ## Prerequisites
 
   - Strong in R programming
-  - R 3.6.3 (check your R version)
-  - RStudio 1.2.5033 (check your RStudio Version)
+  - R 4.0.3 (check your R version)
+  - RStudio 1.3.1093 (check your RStudio Version)
   - R Markdown (read this <https://rmarkdown.rstudio.com/lesson-1.html>)
   - Knowledge about git and GitHub: read ‘Happy Git and GitHub for the
     useR’ (It is absoluately important to read the ebook if you have no
@@ -133,7 +133,7 @@ Assuming that you have `git` installed,
 
 ## Assignments
 
-Register your github account at
+Link your github account at
 <https://signin-apd27wnqlq-uw.a.run.app/sta141b/>
 
 Check regularly the course github organization
