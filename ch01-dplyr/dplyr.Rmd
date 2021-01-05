@@ -1,0 +1,773 @@
+---
+title: "Data Wrangling"
+output: 
+  html_document: 
+    toc: yes
+---
+
+```{r setup, echo = FALSE, message = FALSE}
+library(tidyverse)
+```
+
+Quote from the book "R for Data Science", the author said
+
+> R is an old
+language, and some things that were useful 10 or 20 years ago now get in your
+way. It’s difficult to change base R without breaking existing code, so most
+innovation occurs in packages.
+
+## What is tidyverse?
+
+- base R's functions are often slow and the implementations are often not consistent
+- writing code in `tidyverse` style usually is more elegant
+- the operations would be easily chained together using piping (more below)
+
+So what is tidyverse?
+
+- It is a collection of R packages which are designed to be used together. 
+  - `ggplot2`, for data visualisation
+  - `dplyr`, for data manipulation
+  - `tidyr`, for data tidying
+  - `readr`, for data import
+  - `purrr`, for functional programming
+  - `tibble`, for tibbles, a modern re-imagining of data frames
+  - `stringr`, for strings
+  - `forcats`, for factors
+
+
+## Pipe operator
+
+We are going to detour a bit to talk about pipe operator.
+Pipe operator is a powerful way to make your code much cleaner and readible by
+
+- structuring sequences of data operations left-to-right (as opposed to from the inside and out),
+- avoiding nested function calls,
+- minimizing the need for local variables and function definitions, and
+- making it easy to add steps anywhere in the sequence of operations.
+
+The operators pipe their left-hand side values forward into expressions that
+appear on the right-hand side, i.e. one can replace `f(x)` with 
+`x %>% f()`, where `%>%` is the (main) pipe-operator. When coupling 
+several function calls with the pipe-operator, the benefit will become
+more apparent. Consider this pseudo example:
+
+```{r, eval = FALSE}
+raw_data <- read.csv("/path/to/data/file.csv")
+sub_data <- subset(raw_data, variable_a > x)
+new_data <- transform(sub_data, variable_c = variable_a / variable_b)
+the_data <- head(new_data, 100)
+```
+However, the local variables are really not necessary, so one liner could be
+
+```{r, eval = FALSE}
+the_data <- head(
+  transform(
+    subset(
+      read.csv("/path/to/data/file.csv"),
+      variable_a > x
+    ),
+    variable_c = variable_a / variable_b
+  ),
+  100
+)
+```
+
+But that is too hard to read and reason. If we use pipe operator,
+
+```{r, eval = FALSE}
+the_data <- read.csv("/path/to/data/file.csv") %>%
+  subset(variable_a > x) %>%
+  transform(variable_c = variable_a / variable_b) %>%
+  head(100)
+```
+
+Hint: In RStudio, you could use `Ctrl + Shift + M` (or `Cmd + Shift + M`) to insert the pipe operator.
+
+
+### Basic usage
+
+* `x %>% f` or `x %>% f()` is equivalent to `f(x)`
+* `x %>% f(y)` is equivalent to `f(x, y)`
+* `x %>% f %>% g %>% h` is equivalent to `h(g(f(x)))`
+
+```{r}
+c(1, 2) %>% sum()
+```
+
+```{r}
+choose(5, 3)
+5 %>% choose(3)
+```
+
+
+### The argument placeholder
+
+* `x %>% f(y, .)` is equivalent to `f(y, x)`
+* `x %>% f(y, z = .)` is equivalent to `f(y, z = x)`
+
+```{r}
+3 %>% choose(5, .)
+3 %>% choose(5, k = .)
+```
+
+### Re-using the placeholder
+
+It is straightforward to use the placeholder several times
+in a right-hand side expression. However, when the placeholder
+only appears in a nested expressions magrittr will still apply
+the first-argument rule. The reason is that in most cases this
+results more clean code. 
+
+`x %>% f(y = nrow(.), z = ncol(.))` is equivalent to 
+   `f(x, y = nrow(x), z = ncol(x))`
+
+```{r}
+5 %>% choose(. - 2)
+```
+
+The behavior can be
+overruled by enclosing the right-hand side in braces:
+
+`x %>% {f(y = nrow(.), z = ncol(.))}` is equivalent to 
+   `f(y = nrow(x), z = ncol(x))`
+
+```{r}
+list(n = 5, k = 3) %>% {
+  choose(.$n, .$k)
+}
+```
+
+
+## `dplyr` basics
+
+- It offers five basic verbs
+  - `select`: picks variables based on their names
+  - `filter`: picks cases based on their values
+  - `mutate`: adds new variables that are functions of existing variables
+  - `arrange`: changes the ordering of the rows
+  - `summarize` or `summarise`: reduces multiple values down to a single summary
+
+- These all combine naturally with `group_by` which allows you to perform any operation "by group". 
+
+
+## Obtain some data
+
+First of all, we need some data to work with. If the data is stored in a `csv`,
+
+```{r, eval = FALSE}
+flights <- read_csv("flights.csv")
+```
+
+We are using the `tidyverse` function `read_csv` to import the `flights.csv` instead of the obsolete base function `read.csv`.
+- `read_csv` imports data as `tibble` which has better and more consistent handling of variables.
+- `read_csv` is often faster than `read.csv`
+- `read_csv` handles unicode characters better
+
+There are also `read_tsv` and `read_delim` for reading tab-seperated or delimited files.
+
+
+The datasets are actually obtained from the R package `nycflights13`
+
+```{r}
+# Airline on-time data for all flights departing NYC in 2013.
+library(nycflights13)
+flights
+```
+
+## `select`: picks variables based on their names.
+
+To select arrival and departure times,
+```{r}
+# old way to do it
+# flights[, c("arr_time", "dep_time")]
+flights %>% select(arr_time, dep_time)
+```
+
+### I don't see why it's useful
+
+`dplyr` provides a lot of helper functions,
+
+```{r}
+# colon `:` specifies all the variables between the columns of `dep_time` and `arr_time`
+flights %>% select(dep_time:arr_time)
+# all the columns start with arr_
+flights %>% select(starts_with("arr_"))
+# all the columns end with _time
+flights %>% select(ends_with("_time"))
+# all the columns contain dep
+flights %>% select(contains("dep"))
+# remove particular columns
+flights %>% select(-year)
+# all the columns do not contain dep
+flights %>% select(-contains("dep"))
+# using regular expression (later of the course)
+flights %>% select(matches("^(arr|dep)_"))
+```
+
+Related verbs:
+- if you just need a single variable, you could use `pull`.
+- you could use `rename` to rename columns
+
+```{r}
+# flights$arr_time
+flights %>% pull(arr_time)
+```
+
+```{r}
+flights %>% rename(y = year)
+```
+
+
+```{r}
+# of course, we could select everything
+flights %>% select(everything())
+# move air_time to the front
+flights %>% select(air_time, everything())
+```
+
+
+## `filter`: picks cases based on their values
+
+```{r}
+# flights[, flights$origin == "JFK"]
+# subset(flights, origin == "JFK")
+flights %>% filter(origin == "JFK")
+flights %>% filter(distance > 1000)
+# note that we are using a single `&` instead of `&&` as in base R
+flights %>% filter(origin == "JFK" & distance > 1000)
+flights %>% filter(origin == "JFK", distance > 1000)
+flights %>% filter(distance < 500 | distance > 1000)
+flights %>% filter(!between(distance, 500, 1000))
+# only keep the complete cases
+flights %>% filter(complete.cases(.)) # filter(flights, complete.cases(flights))
+flights %>% drop_na() # same, but more efficient
+```
+
+## Chaining and piping
+
+Very often, we will need to use multiple `dplyr` verbs, for example 
+```{r}
+# the pipe operator %>% increases readability
+flights %>%
+  select(origin, air_time) %>%
+  filter(origin == "JFK") %>%
+  filter(air_time < 500) %>%
+  rename(airtime = air_time)
+```
+```{r}
+# slightly more efficient
+flights %>%
+  select(origin, airtime = air_time) %>%
+  filter(origin == "JFK", airtime < 500)
+```
+
+
+
+```{r}
+# a few more examples
+flights %>%
+  select(origin, air_time) %>%
+  filter(origin == "JFK", air_time < mean(air_time, na.rm = TRUE))
+
+# maybe we want to calculate mean_air_time first
+mean_air_time <- flights %>%
+  pull(air_time) %>%
+  mean(na.rm = TRUE)
+flights %>%
+  select(origin, air_time) %>%
+  filter(origin == "JFK", air_time > mean_air_time)
+```
+
+```{r}
+# what if there is a name collision?
+air_time <- flights %>%
+  pull(air_time) %>%
+  mean(na.rm = TRUE)
+flights %>%
+  select(origin, air_time) %>%
+  filter(origin == "JFK", air_time > !!air_time)
+```
+
+Remarks: use `slice` if you want particular rows
+
+```{r}
+flights %>% slice(100:105)
+```
+
+## `mutate`: adds new variables that are functions of existing variables
+
+```{r}
+flights %>% mutate(
+  gain = dep_delay - arr_delay,
+  speed = distance / air_time * 60
+)
+# we could refer to the columns just created
+flights %>% mutate(
+  gain = dep_delay - arr_delay,
+  gain_per_hour = gain / (air_time / 60)
+)
+```
+```{r}
+# remove a variable
+flights %>% mutate(
+  gain = dep_delay - arr_delay,
+  gain_per_hour = gain / (air_time / 60),
+  air_time = NULL
+)
+```
+
+```{r}
+# `transmute` only keep the new variables
+flights %>% transmute(
+  gain = dep_delay - arr_delay,
+  gain_per_hour = gain / (air_time / 60)
+)
+```
+
+### Six variations on ranking functions
+
+- `row_number`: equivalent to `rank(ties.method = "first")`
+- `min_rank`: equivalent to `rank(ties.method = "min")`
+- `dense_rank`: like `min_rank()`, but with no gaps between ranks
+- `percent_rank`: a number between 0 and 1 computed by rescaling min_rank to [0, 1]
+- `cume_dist`: a cumulative distribution function. Proportion of all values less than or equal to the current rank.
+- `ntile`: a rough rank, which breaks the input vector into n buckets
+
+```{r}
+some_data <- tibble(
+  x = c(3, 4, 1, 3, 1)
+)
+some_data %>%
+  mutate(
+    row_number(),
+    row_number(x),
+    min_rank(x),
+    dense_rank(x),
+    percent_rank(x),
+    cume_dist(x),
+    ntile(x, 3)
+  )
+```
+
+### `lead` and `lag`
+
+```{r}
+some_data2 <- tibble(
+  time = 1:5,
+  value = c(3, 4, 1, 3, 1)
+)
+some_data2 %>% mutate(
+  diff1 = value - lag(value), 
+  diff2 = lead(value) - value
+)
+```
+
+
+
+### Conditional mutation
+
+```{r}
+flights %>% transmute(
+  arr_delay = arr_delay,
+  status = if_else(arr_delay > 0, "delayed", "on time")
+)
+(flight_distances <- flights %>%
+  transmute(
+    distance,
+    distance_type = case_when(
+      distance < 500 ~ "short",
+      distance < 1000 ~ "mid",
+      TRUE ~ "long"
+    )
+  ))
+```
+
+### `recode` values
+
+```{r}
+flight_distances %>% mutate(distance_type = recode(distance_type,
+  "long" = "long-distance",
+  "mid" = "mid-distance",
+  "short" = "short-distance"
+))
+```
+
+```{r}
+some_data %>% mutate(
+  y = recode(x,
+    `1` = 10,
+    `3` = 30
+  )
+)
+```
+
+
+## `arrange`: changes the ordering of the rows
+
+```{r}
+flights %>% arrange(year, month, day)
+flights %>% arrange(desc(dep_delay))
+```
+
+## `summarize` and `group_by` operations
+
+```{r}
+flights %>%
+  group_by(tailnum) %>%
+  summarize(n = n())
+flights %>%
+  group_by(tailnum) %>%
+  tally() # shorthand
+flights %>% count(tailnum) # another shorthand
+```
+
+```{r}
+flights %>%
+  group_by(tailnum) %>%
+  summarize(
+    count = n(),
+    dist = mean(distance, na.rm = TRUE),
+    delay = mean(arr_delay, na.rm = TRUE)
+  )
+```
+
+
+```{r}
+flights %>%
+  group_by(dest) %>%
+  summarize(
+    planes = n_distinct(tailnum),
+    flights = n()
+  )
+```
+
+
+```{r}
+# group by multiple variables
+(per_day <- flights %>%
+  group_by(year, month, day) %>%
+  summarize(flights = n()))
+```
+
+```{r}
+(per_month <- per_day %>%
+  summarize(flights = sum(flights)))
+```
+
+```{r}
+(per_year <- per_month %>%
+  summarize(flights = sum(flights)))
+```
+
+### `across` columns
+
+The `across` function requires dplyr 1.0, which at the point of writing, has not been released yet.
+
+Interested reader could install the development version of `dplyr` with
+```r
+# take your own risk to install it!!
+devtools::install_github("tidyverse/dplyr")
+```
+A toolchain would be required to install it from source.
+
+See https://www.tidyverse.org/blog/2020/04/dplyr-1-0-0-colwise/
+
+
+Suppose, we want to compuate the means for the all numeric columns of `flights`. Naively, we could do
+
+```{r}
+flights %>%
+  group_by(origin) %>%
+  summarize(
+    dep_time = mean(dep_time, na.rm = TRUE),
+    sched_dep_time = mean(sched_dep_time, na.rm = TRUE),
+    dep_delay = mean(dep_delay, na.rm = TRUE),
+    arr_time = mean(arr_time, na.rm = TRUE),
+    sched_arr_time = mean(sched_arr_time, na.rm = TRUE),
+    arr_delay = mean(arr_delay, na.rm = TRUE),
+    flight = mean(flight, na.rm = TRUE),
+    air_time = mean(air_time, na.rm = TRUE),
+    distance = mean(distance, na.rm = TRUE)
+  )
+```
+
+With the new `across` function, it is as easy as:
+```{r}
+flights %>%
+  group_by(origin) %>%
+  summarize(across(dep_time:distance, mean, na.rm = TRUE))
+```
+
+We have accidentally included some non numeric columns.
+
+```{r}
+flights %>%
+  group_by(origin) %>%
+  summarize(
+    across(dep_time:distance & is.numeric, mean, na.rm = TRUE)
+  )
+```
+
+We could also use predicate functions in `across` and use different functions to summerize different variables.
+```{r}
+flights %>%
+  group_by(origin) %>%
+  summarize(
+    across(ends_with("time"), mean, na.rm = TRUE),
+    across(ends_with("delay"), mean, na.rm = TRUE, trim = 0.2),
+  )
+```
+
+## Other useful functions
+
+
+```{r}
+flights %>% glimpse()
+flights %>% 
+  sample_n(1000) %>% 
+  ggplot(aes(arr_delay, dep_delay)) + geom_point(na.rm = TRUE)
+## rows with largest values of air_time with the original order preserved
+flights %>% top_n(3, air_time)
+# two disadvantages: order changes and does not handle ties
+flights %>% arrange(desc(air_time)) %>% head(3)
+```
+
+
+## Two-table verbs
+
+There are 6 types of joins.
+
+- `inner_join(x, y)` only includes observations that match in both x and y
+- `left_join(x, y)` includes all observations in x, regardless of whether they match or not. 
+- `right_join(x, y)` equivalent to left_join(y, x)
+- `full_join(x, y)` includes all observations from x and y
+- `semi_join(x, y)` only keep observations from x if there is a match in y
+- `anti_join(x, y)` remove observations from x if there is a match in y
+
+```{r}
+(df1 <- tibble(id = c(1, 2), v = 2:1))
+(df2 <- tibble(id = c(1, 3), a = 10, b = "a"))
+```
+
+```{r}
+df1 %>% inner_join(df2, by = "id")
+```
+
+
+```{r}
+df1 %>% left_join(df2, by = "id")
+```
+
+
+```{r}
+df1 %>% right_join(df2, by = "id")
+```
+
+
+```{r}
+# outer join
+df1 %>% full_join(df2, by = "id")
+```
+
+
+```{r}
+df1 %>% semi_join(df2, by = "id")
+```
+
+
+```{r}
+df1 %>% anti_join(df2, by = "id")
+```
+
+### Join by the same variable of different names
+
+```{r}
+df1 <- tibble(id = c(1, 2), v = 2:1)
+df2 <- tibble(name = c(1, 3), a = 10, b = "a")
+```
+
+```{r}
+df1 %>% inner_join(df2, by = c("id" = "name"))
+```
+
+
+## Row bind or column bind data frames
+
+```{r}
+df1 <- tibble(a = "hello", b = 2, c = 3)
+df2 <- tibble(a = "world", b = 4)
+```
+
+```{r}
+df1 %>% bind_rows(df2)
+```
+
+
+The `bind_rows` function from `dplyr` is better than `rbind` in several ways.
+
+- `bind_rows` handles missing values
+- `bind_rows` doesn't automatically convert types
+
+
+```{r, error = TRUE}
+df1 <- tibble(a = "hello", b = 2, c = 3)
+df2 <- tibble(a = "world", b = 4)
+df1 %>% rbind(df2)
+```
+
+
+```{r, error = TRUE}
+df1 <- tibble(a = "hello", b = 2)
+df2 <- tibble(a = 2, b = 4)
+df1 %>% rbind(df2)
+df1 %>% bind_rows(df2)
+```
+
+Likewise, `bind_cols` is safer than `cbind`.
+
+```{r}
+df1 <- tibble(x = 1:5)
+df2 <- tibble(y = 1:10)
+```
+
+```{r}
+df1 %>% cbind(df2)
+```
+
+```{r, error = TRUE}
+df1 %>% bind_cols(df2)
+```
+
+
+## Crossing and nesting
+
+Crossing allows you to examine all the combinations between variables.
+
+For example, we know that not all routes between `origin` and `dest` exist.
+```{r}
+all_existing_routes <- flights %>% expand(nesting(origin, dest))
+all_possible_routes <- flights %>% expand(crossing(origin, dest))
+# or simply  
+all_possible_routes <- flights %>% expand(origin, dest)
+```
+
+```{r}
+# these routes do not exist
+all_possible_routes %>% 
+  anti_join(all_existing_routes)
+```
+
+## Completion and missing values
+
+`expand` only keeps on the variables specified. If you want to join the original data, you could use `complete`.
+
+```{r}
+dat <- flights %>% 
+  group_by(origin, dest) %>% 
+  summarize(air_time = mean(air_time, na.rm = TRUE))
+```
+
+
+```{r}
+dat %>%
+  ungroup() %>%  # dplyr 0.8.5
+  complete(origin, dest, fill = list("air_time" = Inf))
+```
+
+```{r}
+df <- tribble(
+  ~x, ~y,
+   1,  2,
+  NA,  3,
+   3, NA
+)
+df
+```
+
+```{r}
+# remove all rows with missing values
+df %>% drop_na()
+```
+
+
+```{r}
+# fill values by copying downward
+df %>% fill(x, y)
+```
+
+
+```{r}
+df %>% 
+  replace_na(list(x = Inf, y = -Inf))
+```
+
+
+## Pivoting Data
+
+Using the datasets from R for Data Science to show that the same data could be organized in different ways.
+
+In general, there are two formats,
+
+- wide format
+  - each subject has its own row
+  - a variable may take multiple columns
+- long format
+  - each variable has its own column
+  - a subject may take multiple rows
+
+### Pivot longer
+
+```{r}
+relig_income
+```
+
+```{r}
+# make sure you have tidyr 1.0
+relig_income %>%
+  pivot_longer(-religion, names_to = "income", values_to = "count")
+```
+
+```{r}
+billboard
+```
+
+```{r}
+billboard %>%
+  pivot_longer(
+    starts_with("wk"),
+    names_to = "week",
+    names_prefix = "wk",
+    values_to = "rank",
+    values_drop_na = TRUE
+  )
+```
+
+### Pivot wider
+
+```{r}
+fish_encounters
+```
+
+```{r}
+fish_encounters %>% pivot_wider(
+  names_from = station,
+  values_from = seen,
+  values_fill = list(seen = 0)
+)
+```
+
+```{r}
+us_rent_income
+```
+
+```{r}
+us_rent_income %>%
+  pivot_wider(names_from = variable, values_from = c(estimate, moe))
+```
+
+
+## References
+
+- R for Data Science http://r4ds.had.co.nz/tidy-data.html
+- Documentation of dplyr https://dplyr.tidyverse.org/
+- Documentation of tidyr https://tidyr.tidyverse.org/
