@@ -659,18 +659,23 @@ all_possible_routes %>%
 
 ## Completion and missing values
 
-`expand` only keeps on the variables specified. If you want to join the original data, you could use `complete`.
+`expand` only keeps the variables specified. If you want to join the original data, you could use `complete`.
 
 ```{r}
-dat <- flights %>% 
+(dat <- flights %>% 
   group_by(origin, dest) %>% 
-  summarize(air_time = mean(air_time, na.rm = TRUE))
+  summarize(air_time = mean(air_time, na.rm = TRUE)) %>% 
+  ungroup())
 ```
 
+```{r}
+dat %>% 
+  expand(origin, dest) %>% 
+  left_join(dat)
+```
 
 ```{r}
 dat %>%
-  ungroup() %>%  # dplyr 0.8.5
   complete(origin, dest, fill = list("air_time" = Inf))
 ```
 
