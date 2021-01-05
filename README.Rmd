@@ -9,10 +9,10 @@ output:
 ## People
 
 - Instructor: Randy Lai<br>
-  You should use Canvas message to contact me. DO NOT send email to me as I tend to ignore emails (too much spams).
+  You should use Campuswire to DM me. DO NOT send email to me as I tend to ignore emails (too much spams).
 - Meeting time: 9:00 - 10:20 AM, TR
-- Office hour: Monday and Thursday 2:00 - 3:00pm  (or by appointment)
-- TA: Yuxuan Zhang
+- TA: Xiancheng Lin, Tongyi Tang and Zhenyu Wei.
+- Office hour: To be announced
 
 ## Material
 
