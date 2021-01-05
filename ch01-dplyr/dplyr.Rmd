@@ -461,19 +461,7 @@ flights %>%
 
 ### `across` columns
 
-The `across` function requires dplyr 1.0, which at the point of writing, has not been released yet.
-
-Interested reader could install the development version of `dplyr` with
-```r
-# take your own risk to install it!!
-devtools::install_github("tidyverse/dplyr")
-```
-A toolchain would be required to install it from source.
-
-See https://www.tidyverse.org/blog/2020/04/dplyr-1-0-0-colwise/
-
-
-Suppose, we want to compuate the means for the all numeric columns of `flights`. Naively, we could do
+Suppose, we want to compute the means for the all numeric columns of `flights`. Naively, we could do
 
 ```{r}
 flights %>%
@@ -527,7 +515,7 @@ flights %>%
   sample_n(1000) %>% 
   ggplot(aes(arr_delay, dep_delay)) + geom_point(na.rm = TRUE)
 ## rows with largest values of air_time with the original order preserved
-flights %>% top_n(3, air_time)
+flights %>% slice_max(air_time, n = 3)
 # two disadvantages: order changes and does not handle ties
 flights %>% arrange(desc(air_time)) %>% head(3)
 ```
@@ -636,6 +624,18 @@ df1 %>% cbind(df2)
 
 ```{r, error = TRUE}
 df1 %>% bind_cols(df2)
+```
+
+## Updating rows
+
+Suppose we have two data frames.
+
+```{r}
+df1 <- tribble(
+  ~name, ~age, ~gender,
+  "John",  NA,    "M",
+  "Linda", NA,    "F"
+)
 ```
 
 
