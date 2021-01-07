@@ -23,7 +23,11 @@
     much spams).
   - Meeting time: 9:00 - 10:20 AM, TR
   - TA: Xiancheng Lin, Tongyi Tang and Zhenyu Wei.
-  - Office hour: To be announced
+  - Office hour:
+      - Zhenyu: 4-5 PM Monday
+      - Tongyi: 2-4 PM Monday and Tuesday
+      - Xiancheng 4:10-5:10 Thursday
+      - Randy: 10-12 PM Friday
 
 ## Material
 
