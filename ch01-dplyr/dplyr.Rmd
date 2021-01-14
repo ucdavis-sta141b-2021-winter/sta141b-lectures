@@ -40,7 +40,7 @@ So what is tidyverse?
 We are going to detour a bit to talk about pipe operator.
 Pipe operator is a powerful way to make your code much cleaner and readible by
 
-- structuring sequences of data operations left-to-right (as opposed to from the inside and out),
+- structuring sequences of data operations left-to-right (as opposed to from the inside and outside),
 - avoiding nested function calls,
 - minimizing the need for local variables and function definitions, and
 - making it easy to add steps anywhere in the sequence of operations.
@@ -91,6 +91,7 @@ Hint: In RStudio, you could use `Ctrl + Shift + M` (or `Cmd + Shift + M`) to ins
 * `x %>% f %>% g %>% h` is equivalent to `h(g(f(x)))`
 
 ```{r}
+sum(c(1, 2))
 c(1, 2) %>% sum()
 ```
 
@@ -122,14 +123,22 @@ results more clean code.
    `f(x, y = nrow(x), z = ncol(x))`
 
 ```{r}
+a <- 100
 5 %>% choose(. - 2)
+choose(5, 5 - 2)
 ```
 
 The behavior can be
 overruled by enclosing the right-hand side in braces:
 
+```{r}
+4 %>% {choose(5, . - 1)}
+choose(5, 4 - 1)
+```
+
 `x %>% {f(y = nrow(.), z = ncol(.))}` is equivalent to 
    `f(y = nrow(x), z = ncol(x))`
+
 
 ```{r}
 list(n = 5, k = 3) %>% {
@@ -224,12 +233,16 @@ flights %>% select(everything())
 # move air_time to the front
 flights %>% select(air_time, everything())
 ```
+```{r}
+# a new function `relocate
+flights %>% relocate(air_time, .after = day)
+```
 
 
 ## `filter`: picks cases based on their values
 
 ```{r}
-# flights[, flights$origin == "JFK"]
+# flights[flights$origin == "JFK", ]
 # subset(flights, origin == "JFK")
 flights %>% filter(origin == "JFK")
 flights %>% filter(distance > 1000)
@@ -243,6 +256,8 @@ flights %>% filter(complete.cases(.)) # filter(flights, complete.cases(flights))
 flights %>% drop_na() # same, but more efficient
 ```
 
+
+
 ## Chaining and piping
 
 Very often, we will need to use multiple `dplyr` verbs, for example 
@@ -254,6 +269,7 @@ flights %>%
   filter(air_time < 500) %>%
   rename(airtime = air_time)
 ```
+
 ```{r}
 # slightly more efficient
 flights %>%
@@ -261,18 +277,21 @@ flights %>%
   filter(origin == "JFK", airtime < 500)
 ```
 
-
-
 ```{r}
 # a few more examples
 flights %>%
   select(origin, air_time) %>%
   filter(origin == "JFK", air_time < mean(air_time, na.rm = TRUE))
+```
 
+```{r}
 # maybe we want to calculate mean_air_time first
 mean_air_time <- flights %>%
   pull(air_time) %>%
   mean(na.rm = TRUE)
+
+mean_air_time
+
 flights %>%
   select(origin, air_time) %>%
   filter(origin == "JFK", air_time > mean_air_time)
@@ -283,15 +302,19 @@ flights %>%
 air_time <- flights %>%
   pull(air_time) %>%
   mean(na.rm = TRUE)
+
 flights %>%
   select(origin, air_time) %>%
   filter(origin == "JFK", air_time > !!air_time)
 ```
 
-Remarks: use `slice` if you want particular rows
+Remarks: use `slice`, `head`, `tail` if you want particular rows
 
 ```{r}
+flights %>% head(4)
 flights %>% slice(100:105)
+flights %>% tail(5)
+flights %>% slice((n() - 4):n())
 ```
 
 ## `mutate`: adds new variables that are functions of existing variables
@@ -307,17 +330,18 @@ flights %>% mutate(
   gain_per_hour = gain / (air_time / 60)
 )
 ```
+
 ```{r}
 # remove a variable
 flights %>% mutate(
   gain = dep_delay - arr_delay,
   gain_per_hour = gain / (air_time / 60),
-  air_time = NULL
+  air_time = NULL,
 )
 ```
 
 ```{r}
-# `transmute` only keep the new variables
+# `transmute` only keeps the new variables
 flights %>% transmute(
   gain = dep_delay - arr_delay,
   gain_per_hour = gain / (air_time / 60)
@@ -356,39 +380,49 @@ some_data2 <- tibble(
   time = 1:5,
   value = c(3, 4, 1, 3, 1)
 )
+
+some_data2 %>% mutate(
+  lag(value),
+  lead(value)
+)
+
 some_data2 %>% mutate(
   diff1 = value - lag(value), 
   diff2 = lead(value) - value
 )
 ```
 
-
+Remark: the package `zoo` has functions to calculate rolling means (moving averages)
 
 ### Conditional mutation
 
 ```{r}
 flights %>% transmute(
-  arr_delay = arr_delay,
+  arr_delay,
   status = if_else(arr_delay > 0, "delayed", "on time")
 )
-(flight_distances <- flights %>%
-  transmute(
-    distance,
-    distance_type = case_when(
-      distance < 500 ~ "short",
-      distance < 1000 ~ "mid",
-      TRUE ~ "long"
+(
+  flight_distances <- flights %>%
+    transmute(
+      distance,
+      distance_type = case_when(
+        distance < 500 ~ "short",
+        distance < 1000 ~ "mid",
+        TRUE ~ "long"
+      )
     )
-  ))
+)
 ```
+
 
 ### `recode` values
 
 ```{r}
-flight_distances %>% mutate(distance_type = recode(distance_type,
-  "long" = "long-distance",
-  "mid" = "mid-distance",
-  "short" = "short-distance"
+flight_distances %>% mutate(
+  distance_type = recode(distance_type,
+    "long" = "long-distance",
+    "mid" = "mid-distance",
+    "short" = "short-distance"
 ))
 ```
 
@@ -412,12 +446,21 @@ flights %>% arrange(desc(dep_delay))
 ## `summarize` and `group_by` operations
 
 ```{r}
+flights %>% summarize(
+  air_time = mean(air_time, na.rm = TRUE)
+)
+# mean(flights$air_time, na.rm = TRUE)
+```
+
+```{r}
 flights %>%
   group_by(tailnum) %>%
   summarize(n = n())
+
 flights %>%
   group_by(tailnum) %>%
   tally() # shorthand
+
 flights %>% count(tailnum) # another shorthand
 ```
 
@@ -495,6 +538,14 @@ flights %>%
     across(dep_time:distance & is.numeric, mean, na.rm = TRUE)
   )
 ```
+```{r}
+flights %>%
+  group_by(origin) %>%
+  summarize(
+    across(-c(year, month, day) & is.numeric, mean, na.rm = TRUE)
+  )
+```
+
 
 We could also use predicate functions in `across` and use different functions to summerize different variables.
 ```{r}
@@ -520,6 +571,52 @@ flights %>% slice_max(air_time, n = 3)
 flights %>% arrange(desc(air_time)) %>% head(3)
 ```
 
+## Row bind or column bind data frames
+
+```{r}
+df1 <- tibble(a = "hello", b = 2, c = 3)
+df2 <- tibble(a = "world", b = 4)
+```
+
+```{r}
+df1 %>% bind_rows(df2)
+```
+
+
+The `bind_rows` function from `dplyr` is better than `rbind` in several ways.
+
+- `bind_rows` handles missing values
+- `bind_rows` doesn't automatically convert types
+
+
+```{r, error = TRUE}
+df1 <- tibble(a = "hello", b = 2, c = 3)
+df2 <- tibble(a = "world", b = 4)
+df1 %>% rbind(df2)
+```
+
+
+```{r, error = TRUE}
+df1 <- tibble(a = "hello", b = 2)
+df2 <- tibble(a = 2, b = 4)
+df1 %>% rbind(df2)
+df1 %>% bind_rows(df2)
+```
+
+Likewise, `bind_cols` is safer than `cbind`.
+
+```{r}
+df1 <- tibble(x = 1:5)
+df2 <- tibble(y = 1:10)
+```
+
+```{r}
+df1 %>% cbind(df2)
+```
+
+```{r, error = TRUE}
+df1 %>% bind_cols(df2)
+```
 
 ## Two-table verbs
 
@@ -578,65 +675,61 @@ df2 <- tibble(name = c(1, 3), a = 10, b = "a")
 df1 %>% inner_join(df2, by = c("id" = "name"))
 ```
 
-
-## Row bind or column bind data frames
-
-```{r}
-df1 <- tibble(a = "hello", b = 2, c = 3)
-df2 <- tibble(a = "world", b = 4)
-```
-
-```{r}
-df1 %>% bind_rows(df2)
-```
-
-
-The `bind_rows` function from `dplyr` is better than `rbind` in several ways.
-
-- `bind_rows` handles missing values
-- `bind_rows` doesn't automatically convert types
-
-
-```{r, error = TRUE}
-df1 <- tibble(a = "hello", b = 2, c = 3)
-df2 <- tibble(a = "world", b = 4)
-df1 %>% rbind(df2)
-```
-
-
-```{r, error = TRUE}
-df1 <- tibble(a = "hello", b = 2)
-df2 <- tibble(a = 2, b = 4)
-df1 %>% rbind(df2)
-df1 %>% bind_rows(df2)
-```
-
-Likewise, `bind_cols` is safer than `cbind`.
-
-```{r}
-df1 <- tibble(x = 1:5)
-df2 <- tibble(y = 1:10)
-```
-
-```{r}
-df1 %>% cbind(df2)
-```
-
-```{r, error = TRUE}
-df1 %>% bind_cols(df2)
-```
-
 ## Updating rows
 
-Suppose we have two data frames.
+In some situation, we would like to use the values from one table to update the values of another table.
 
 ```{r}
-df1 <- tribble(
-  ~name, ~age, ~gender,
-  "John",  NA,    "M",
-  "Linda", NA,    "F"
-)
+df <- tibble(
+  a = 1:3, 
+  b = letters[c(1:2, NA)], 
+  c = 0.5 + 0:2)
 ```
+
+Outer join doesn't give the intended result
+```{r}
+df %>% 
+  full_join(tibble(a = 3, b = "z", c = 3.5))
+```
+
+Inserting rows
+```{r}
+df %>% 
+  rows_insert(tibble(a = 4, b = "z", c = 3.5))
+# or explictly
+df %>% 
+  rows_insert(tibble(a = 4, b = "z", c = 3.5), by = "a")
+```
+
+```{r, error = TRUE}
+# error because `a = 3` exists
+df %>% 
+  rows_insert(tibble(a = 3, b = "z", c = 3.5))
+```
+
+Use `rows_update` to update existing rows
+```{r}
+df %>% 
+  rows_update(tibble(a = 3, b = "z", c = 3.5))
+```
+
+`rows_patch` works like rows_update() but only overwrites NA values.
+```{r}
+df %>% 
+  rows_patch(tibble(a = 3, b = "z", c = 3.5))
+```
+```{r, error = TRUE}
+# error when key doesn't exist
+df %>% 
+  rows_patch(tibble(a = 4, b = "z", c = 3.5))
+```
+
+`rows_upsert` inserts or updates depending on whether or not the key value already exists
+```{r}
+df %>% 
+  rows_upsert(tibble(a = 3:4, b = c("x", "y"), c = c(3.5, 4.5)))
+```
+
 
 
 ## Crossing and nesting
