@@ -96,6 +96,7 @@ film <- sakila_lite %>%
   tbl("film")
 ```
 
+
 ```{r}
 # to download all observations
 film2 <- film %>% 
@@ -107,6 +108,7 @@ film2 <- film %>%
 # dbDisconnect(sakila_lite)
 ```
 
+
 `sakila_lite %>% tbl("film")` creates a virtual table rather loading the whole table into memory.
 
 ```{r}
@@ -115,9 +117,16 @@ class(film2)
 ```
 
 ```{r}
-film %>%
-  filter(length > 90) %>%
+sakila_lite %>% dbListFields("film")
+```
+
+
+```{r}
+film90 <- film %>%
+  filter(length > 90) %>% 
   collect()
+class(film90)
+film90
 ```
 
 
@@ -126,7 +135,6 @@ film %>%
 https://datamastery.gitlab.io/exercises/sakila-queries.html
 
 - Which actors have the first name Scarlett?
-
 
 ```{r}
 scarlett <- sakila_lite %>%
@@ -143,9 +151,9 @@ scarlett %>%
     first_name = str_to_title(first_name), 
     last_name = str_to_title(last_name))
 ```
-Note: mutation is done locally on my machine
+Note: mutation is done locally in R.
 
-It is possible to do mutation on the remote server
+It is possible to do mutation on the remote server (Postgresql sevrer)
 
 ```{r}
 sakila_psql %>%
@@ -157,7 +165,7 @@ sakila_psql %>%
   collect()
 ```
 
-Note: SQLite doesn't support transforming title case but Postgresql does.
+Note: SQLite and Mysql don't support transforming title case but Postgresql does.
 
 - Which actors have the last name Johansson?
 
@@ -176,6 +184,7 @@ sakila_lite %>%
   summarize(n = n_distinct(last_name)) %>% 
   collect()
 ```
+
 
 - Which last names are not repeated?
 
@@ -202,12 +211,13 @@ sakila_lite %>%
 - Which actor has appeared in the most films?
 
 ```{r}
+actor <- sakila_lite %>% tbl("actor")
 sakila_lite %>%
   tbl("film_actor") %>%
   count(actor_id) %>%
   arrange(desc(n)) %>%
   head(1) %>%
-  inner_join(tbl(sakila_lite, "actor"), by = "actor_id") %>%
+  inner_join(actor, by = "actor_id") %>%
   collect()
 ```
 
