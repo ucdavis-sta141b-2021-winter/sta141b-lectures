@@ -24,7 +24,7 @@ output:
 | ----  | ----                          | ----
 | 01-05 | Introduction                  | [introduction]
 | 01-07 | [dplyr](ch01-dplyr/dplyr.Rmd) | [dplyr]
-| 01-07 | [sql](ch02-sql/sql.Rmd) | [sql]
+| 01-19 | [sql](ch02-sql/sql.Rmd) | [sql]
 
 
 
