@@ -35,6 +35,7 @@
 | ----- | ----------------------------- | --------------------------------------------------------------------------------------------- |
 | 01-05 | Introduction                  | [introduction](README.md)                                                                     |
 | 01-07 | [dplyr](ch01-dplyr/dplyr.Rmd) | [dplyr](https://ucdavis-sta141b-2021-winter.github.io/sta141b-lectures/ch01-dplyr/dplyr.html) |
+| 01-07 | [sql](ch02-sql/sql.Rmd)       | \[sql\]                                                                                       |
 
 ## Links
 
