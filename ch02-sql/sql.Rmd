@@ -1,0 +1,877 @@
+---
+title: "Database and SQL"
+output: 
+  html_document: 
+    toc: yes
+---
+
+```{r, message = FALSE}
+library(tidyverse)
+library(DBI)
+```
+
+```{r, echo = FALSE}
+# to suppress the object not found error when kniting
+mydb <- NULL
+```
+
+What is a database? It is what google says
+
+> a structured set of data held in a computer, especially one that is accessible in various ways.
+
+A relational database is a type of database that stores and provides access to data points that are related to one another. Relation databases are administrated by a Relational Database Management System (RDBMS). The data in RDBMS is stored in database objects called tables. A table is a collection of related data entries and it consists of columns and rows.
+
+There are many RDBMS
+- MySQL (owned by Oracle)
+- MariaDB (open source version MySQL)
+- PostgreSQL (open source, ANSI)
+- SQL Server (microsoft)
+- SQLite (open source, single file)
+
+What is SQL? Structured Query Language (or SQL) is a standard language for accessing and manipulating relational databases.
+However, each RDMBS may have their own extension of the SQL language and their implmentation may vary too.
+
+
+## Connect to a databse
+
+We are going to use a popular database called Sakila https://www.jooq.org/sakila.
+
+The Sakila database is a nicely normalised schema modelling a DVD rental store, featuring things like films, actors, film-actor relationships, and a central inventory table that connects films, stores, and rentals.
+
+In the following, we are going to use `sqlite`, `postgresql` and `MySql`.
+
+
+### SQLite
+
+The database is called `sakila.sqlite`. You could either git clone from lectures repo or download using the code
+
+```{r}
+if (!file.exists("sakila.sqlite") || file.size("sakila.sqlite") == 0) {
+  download.file(
+    "https://github.com/ucdavis-sta141b-sq-2020/sta141b-notes/raw/master/ch02-sql/sakila.sqlite", 
+    destfile = "sakila.sqlite")
+}
+```
+
+The file format is `.sqlite` which is one of the very common relational database formats, espeically for simple problems.
+
+```{r}
+sakila_lite <- dbConnect(RSQLite::SQLite(), dbname = "sakila.sqlite")
+sakila_lite %>% dbListTables()
+sakila_lite %>% dbListFields("actor")  # column names
+```
+
+### Postgresql
+
+I have also uploaded the Sakila database to a postgres server owned by the department. (You'll need to either on the campus or over UCD vpn to connect to it)
+
+```{r}
+sakila_psql <- dbConnect(RPostgres::Postgres(),
+  dbname = "sakila",
+  user = "psqluser", password = "secret", host = "alan.ucdavis.edu"
+)
+sakila_psql %>% dbListTables()
+```
+
+
+### MySQL
+
+MySQL (MariaDB)) is another popular RDBMS.
+
+
+```{r}
+sakila_mysql <- dbConnect(RMariaDB::MariaDB(),
+  dbname = "DATA",
+  user = "student", password = "141b@2020stats", host = "alan.ucdavis.edu"
+)
+sakila_mysql %>% dbListTables()
+```
+
+
+## How not to use SQL?
+
+`dplyr` provides an excellent interface for users without any SQL background to query databases.
+
+```{r}
+film <- sakila_lite %>%
+  tbl("film")
+```
+
+```{r}
+# to download all observations
+film2 <- film %>% 
+  collect()
+```
+
+`film` relies on the connection
+```{r}
+# dbDisconnect(sakila_lite)
+```
+
+`sakila_lite %>% tbl("film")` creates a virtual table rather loading the whole table into memory.
+
+```{r}
+class(film)
+class(film2)
+```
+
+```{r}
+film %>%
+  filter(length > 90) %>%
+  collect()
+```
+
+
+## Sakila queries
+
+https://datamastery.gitlab.io/exercises/sakila-queries.html
+
+- Which actors have the first name Scarlett?
+
+
+```{r}
+scarlett <- sakila_lite %>%
+  tbl("actor") %>%
+  filter(str_to_lower(first_name) == str_to_lower("Scarlett")) %>%
+  collect()
+```
+
+Suppose we want to make the result a bit more beautiful.
+
+```{r}
+scarlett %>% 
+  mutate(
+    first_name = str_to_title(first_name), 
+    last_name = str_to_title(last_name))
+```
+Note: mutation is done locally on my machine
+
+It is possible to do mutation on the remote server
+
+```{r}
+sakila_psql %>%
+  tbl("actor") %>%
+  filter(str_to_lower(first_name) == str_to_lower("Scarlett")) %>%
+  mutate(
+    first_name = str_to_title(first_name), 
+    last_name = str_to_title(last_name)) %>% 
+  collect()
+```
+
+Note: SQLite doesn't support transforming title case but Postgresql does.
+
+- Which actors have the last name Johansson?
+
+```{r}
+sakila_lite %>%
+  tbl("actor") %>%
+  filter(str_to_lower(last_name) == "johansson") %>%
+  collect()
+```
+
+- How many distinct actors last names are there?
+
+```{r}
+sakila_lite %>%
+  tbl("actor") %>%
+  summarize(n = n_distinct(last_name)) %>% 
+  collect()
+```
+
+- Which last names are not repeated?
+
+
+```{r}
+sakila_lite %>%
+  tbl("actor") %>%
+  count(last_name) %>%
+  filter(n == 1) %>%
+  collect()
+```
+
+- Which last names appear more than once?
+
+```{r}
+sakila_lite %>%
+  tbl("actor") %>%
+  count(last_name) %>%
+  filter(n > 1) %>%
+  collect()
+```
+
+
+- Which actor has appeared in the most films?
+
+```{r}
+sakila_lite %>%
+  tbl("film_actor") %>%
+  count(actor_id) %>%
+  arrange(desc(n)) %>%
+  head(1) %>%
+  inner_join(tbl(sakila_lite, "actor"), by = "actor_id") %>%
+  collect()
+```
+
+- What is that average running time of all the films in the sakila DB?
+
+```{r}
+sakila_lite %>%
+  tbl("film") %>%
+  summarize(m = mean(length)) %>%
+  collect()
+```
+
+- What is the average running time of films by category?
+
+```{r}
+sakila_lite %>%
+  tbl("film") %>%
+  left_join(tbl(sakila_lite, "film_category"), by = "film_id") %>%
+  group_by(category_id) %>%
+  summarize(mean_length = mean(length)) %>%
+  left_join(tbl(sakila_lite, "category"), by = "category_id") %>%
+  select(name, mean_length) %>%
+  collect()
+```
+
+- Is 'Unforgiven Zoolander' available for rent from Store 1?
+
+```{r}
+uz <- sakila_lite %>%
+  tbl("film") %>%
+  filter(str_to_lower(title) == str_to_lower("Unforgiven Zoolander")) %>%
+  select(film_id)
+all_inventories_of_store1 <- sakila_lite %>%
+  tbl("inventory") %>%
+  filter(store_id == 1) %>%
+  select(film_id, inventory_id, store_id)
+not_yet_returned <- sakila_lite %>%
+  tbl("rental") %>%
+  filter(is.na(return_date)) %>%
+  select(inventory_id)
+uz %>%
+  inner_join(all_inventories_of_store1, by = "film_id") %>%
+  anti_join(not_yet_returned) %>%
+  count() %>%
+  collect()
+```
+
+
+## SQL
+
+We just see some example queries of a relational database. Beind the scene, we are using a language called SQL. For example, in the last query, the SQL used is
+
+```{r}
+uz %>%
+  left_join(all_inventories_of_store1) %>%
+  anti_join(not_yet_returned) %>%
+  count() %>%
+  show_query()
+```
+
+Why learning SQL when there is dplyr?
+
+- SQL is everywhere (used in python, php, etc..)
+- dplyr magics only read, donot write
+- Job interviews
+
+
+In R, a sql query can be made by using `dbGetQuery`
+
+```{r}
+sakila_lite %>%
+  dbGetQuery("SELECT COUNT(*) AS `n` FROM `rental`")
+```
+
+
+We could also make SQL query by sql block. In here, we are using the connection `sakila_lite`. The result will be printed directly.
+
+```{sql connection = sakila_lite}
+SELECT * FROM `rental`;
+```
+
+In we need the output, set `output.var` to `rental_count`
+
+```{sql connection = sakila_lite, output.var = "rental"}
+SELECT * FROM `rental`;
+```
+
+The output could be later used in R blocks
+```{r}
+as_tibble(rental)
+```
+
+For comparsion, in Python, we use
+```{python, eval = FALSE}
+import sqlite3
+sakila = sqlite3.connect('sakila.sqlite')
+c = sakila.cursor()
+c.execute("SELECT * FROM `rental`")
+c.fetchall()
+```
+
+### Identifier quotation
+
+SQLite supports both double quotes (which is the standard) and backticks to quote identifiers (table and column names). Backticks are used in another popular database MySQL. Double quotes are used in Postgresql. It is always a good practice to quote the identifers.
+
+
+```{sql connection = sakila_mysql}
+-- MySQL
+SELECT COUNT(*) AS `n` from `actor`;
+```
+
+```{sql connection = sakila_psql}
+-- PostgresQL (ANSI standstad)
+SELECT COUNT(*) AS "n" from "actor";
+```
+
+SQLite supports both styles.
+```{sql connection = sakila_lite}
+SELECT COUNT(*) AS `n` from `actor`;
+```
+
+### SELECT
+
+The SELECT statement is pretty much the `select()` function in `dplyr`.
+
+```{sql connection = sakila_lite}
+SELECT "last_name" FROM "actor";
+```
+
+
+```{sql connection = sakila_lite}
+SELECT LOWER("last_name") AS "family_name" FROM "actor";
+```
+
+For comparision,
+```{r}
+sakila_lite %>%
+  tbl("actor") %>%
+  transmute(family_name = str_to_lower(last_name)) %>%
+  collect()
+```
+```{r}
+sakila_lite %>%
+  tbl("actor") %>%
+  transmute(family_name = str_to_lower(last_name)) %>%
+  show_query()
+```
+
+
+To select every column,
+```{sql connection = sakila_lite}
+SELECT * FROM "actor";
+```
+
+```{sql connection = sakila_lite}
+SELECT "rental_id", "last_update" FROM "rental";
+```
+
+
+### ORDER BY Clause
+
+It is equivalent to `arrange()` in `dplyr`
+
+
+```{sql connection = sakila_lite}
+SELECT "film_id", "title" FROM "film" ORDER BY "title";
+```
+
+```{sql connection = sakila_lite}
+SELECT "film_id", "title" FROM "film" ORDER BY "title" DESC;
+```
+
+
+### DISTINCT
+
+DISTINCT operator to remove duplicates from a result set. It is equivalent to `distinct()` function in `dplyr`.
+
+```{sql connection = sakila_lite}
+SELECT DISTINCT "last_name" FROM "actor";
+```
+
+
+```{r}
+sakila_lite %>%
+  tbl("actor") %>%
+  distinct(last_name) %>% 
+  collect()
+```
+
+
+### LIMIT
+
+```{sql connection = sakila_lite}
+SELECT * FROM "actor" LIMIT 2;
+```
+
+```{r}
+sakila_lite %>%
+  tbl("actor") %>%
+  head(2) %>% 
+  collect()
+```
+
+
+### WHERE
+
+It is equivalent to `filter()` in `dplyr`.
+
+```{sql connection = sakila_lite}
+SELECT * FROM "film" WHERE "rating" = "PG" AND "length" = 90;
+```
+```{sql connection = sakila_psql}
+SELECT * FROM "film" WHERE "rating" = 'PG' AND "length" = 90;
+```
+```{sql connection = sakila_mysql}
+SELECT * FROM `film` WHERE `rating` = "PG" AND `length` = 90;
+```
+Remarks:
+
+- For strings, SQLite (and MySQL) allows double qoutes to quote string values but it is actually not the SQL standard. In SQL standard, strings are quoted in single quotes.
+- In SQL standard, we should use `=` for comparison, but not `==`.
+- THere eixists other keywords such as `NOT` and `OR`.
+
+```{r}
+sakila_lite %>%
+  tbl("film") %>%
+  filter(rating == "PG", length == 90)
+```
+
+- The `IN` operator
+
+```{sql connection = sakila_lite}
+SELECT * FROM "film" WHERE "rating" IN ('PG', 'PG-13');
+```
+
+```{r}
+sakila_lite %>%
+  tbl("film") %>%
+  filter(rating %in% c("PG", "PG-13")) %>% 
+  collect()
+```
+
+- The `LIKE` operator
+
+See https://www.w3schools.com/sql/sql_like.asp
+
+```{sql connection = sakila_lite}
+SELECT "title" FROM "film" WHERE "title" LIKE '%victory%';
+```
+
+Remark: in SQLite, the `LIKE` operator is case insensitive. However, it is not the case for other DBs.
+
+
+```{sql connection = sakila_psql}
+SELECT "title" FROM "film" WHERE "title" LIKE '%victory%';
+```
+
+In Postgres, there is a `ILIKE` (case insensitive `LIKE`) operator
+```{sql connection = sakila_psql}
+SELECT "title" FROM "film" WHERE "title" ILIKE '%victory%';
+```
+
+In MySQL (depends on the configuration),
+```{sql connection = sakila_mysql}
+SELECT `title` FROM `film` WHERE `title` LIKE '%victory%';
+```
+
+A slightly universal solution
+```{sql connection = sakila_psql}
+SELECT "title" FROM "film" WHERE LOWER("title") LIKE '%victory%';
+```
+
+
+- REGEX
+
+Different servers use different operators to match regular expression. For MySQL, it is the REGEXP operator. For Postgresql, it is SIMILAR TO. For SQLite, it simiply doesn't support regex.
+
+Though, Postgresql's implementation of regular expression is a bit different from the standard regex, see for example https://www.postgresql.org/docs/9.0/functions-matching.html
+
+
+### CASE
+
+Similar to `case_when()` in `dplyr`.
+
+```{sql connection = sakila_lite}
+SELECT 
+  "film_id", 
+  "title", 
+  CASE 
+    WHEN "length" < 60 THEN 'short'
+    WHEN "length" < 90 THEN 'mid'
+    ELSE 'long'
+  END "length"
+FROM "film";
+```
+
+
+### JOIN operations
+
+
+- Inner Join - selects records that have matching values in both tables.
+
+```{sql connection = sakila_lite}
+SELECT *
+  FROM "inventory" a JOIN "rental" b
+  ON a."inventory_id" = b."inventory_id";
+```
+
+If we only want `store_id` and `customer_id`,
+```{sql connection = sakila_lite}
+SELECT a."store_id", b."customer_id"
+  FROM "inventory" a JOIN "rental" b
+  ON a."inventory_id" = b."inventory_id"
+```
+
+```{r}
+inner_join(
+  tbl(sakila_lite, "inventory"), 
+  tbl(sakila_lite, "rental"), 
+  by = "inventory_id") %>%
+  select(store_id, customer_id) %>% 
+  collect()
+```
+
+
+We could also join a more sophisticated subquery.
+
+- Find all the inventories that were rented but not retured.
+
+
+```{sql connection = sakila_lite}
+SELECT a."store_id", a."inventory_id", b."customer_id"
+  FROM "inventory" a 
+  JOIN (
+    SELECT * FROM "rental" WHERE "return_date" IS NULL
+  ) b ON a."inventory_id" = b."inventory_id"
+```
+
+
+- Left Join - returns all records from the left table, and the matched records from the right table
+
+```{sql connection = sakila_lite}
+SELECT a."store_id", a."inventory_id", b."customer_id"
+  FROM "inventory" a 
+  LEFT JOIN (
+    SELECT * FROM "rental" WHERE "return_date" IS NULL
+  ) b ON a."inventory_id" = b."inventory_id"
+```
+
+- Right Join - opposite of Left Join
+
+```{sql connection = sakila_psql}
+SELECT a."store_id", a."inventory_id", b."customer_id"
+  FROM "inventory" a 
+  RIGHT JOIN (
+    SELECT * FROM "rental" WHERE "return_date" IS NULL
+  ) b ON a."inventory_id" = b."inventory_id"
+```
+
+Remark: SQLite doesn't support Right join
+
+- Full Join - returns all records when there is a match in left or right table records.
+
+```{sql connection = sakila_psql}
+SELECT a."store_id", a."inventory_id", b."customer_id"
+  FROM "inventory" a 
+  FULL JOIN (
+    SELECT * FROM "rental" WHERE "return_date" IS NULL
+  ) b ON a."inventory_id" = b."inventory_id"
+```
+
+Remark: SQLite doesn't support full join.
+
+- Semi Join - return all records in the left table which has a match in the right table.
+
+```{sql connection = sakila_lite}
+SELECT *
+  FROM "inventory" a
+  WHERE EXISTS (
+    SELECT * FROM "rental" b
+      WHERE "return_date" IS NULL AND b."inventory_id" = a."inventory_id"
+  )
+```
+
+```{r}
+tbl(sakila_lite, "inventory") %>% 
+  semi_join(
+    tbl(sakila_lite, "rental") %>% filter(is.na(return_date)),
+    by = "inventory_id") %>% 
+  collect()
+```
+
+
+- Anti Join - remove all records in the left table which has a match in the right table.
+
+```{sql connection = sakila_lite}
+SELECT *
+  FROM "inventory" a
+  WHERE NOT EXISTS (
+    SELECT * FROM "rental" b
+      WHERE b."return_date" IS NULL AND a."inventory_id" = b."inventory_id"
+  )
+```
+
+```{r}
+tbl(sakila_lite, "inventory") %>% 
+  anti_join(
+    tbl(sakila_lite, "rental") %>% filter(is.na(return_date)),
+    by = "inventory_id") %>% 
+  collect()
+```
+
+### Aggregate Functions
+
+- AVG – calculate the average value of a set.
+- COUNT – return the number of items in a set.
+- SUM – return the sum all or distinct items of a set.
+- MAX – find the maximum value in a set.
+- MIN – find the minimum value in a set.
+
+```{sql connection = sakila_lite}
+SELECT AVG("length") as "avg_length" FROM "film"
+```
+
+```{r}
+sakila_lite %>% 
+  tbl("film") %>% 
+  summarize(avg_length = mean(length)) %>% 
+  collect()
+```
+
+
+### Group By
+
+```{sql connection = sakila_lite}
+SELECT "rating", AVG("length") AS "avg_length" 
+  FROM "film" GROUP BY "rating";
+```
+
+```{r}
+sakila_lite %>% 
+  tbl("film") %>% 
+  group_by(rating) %>% 
+  summarize(avg_length = mean(length)) %>% 
+  collect()
+```
+
+
+```{sql connection = sakila_lite}
+SELECT "rating", "rental_duration", AVG("length") AS "avg_length" 
+  FROM "film" GROUP BY "rating", "rental_duration";
+```
+
+
+### Subquery and WITH
+
+We could use subquery to perform more complicated tasks.
+
+```{sql connection = sakila_psql}
+SELECT *
+FROM
+  (
+  SELECT "rating", AVG("length") AS "avg_length" 
+    FROM "film" GROUP BY "rating"
+  ) "Temp"
+WHERE "avg_length" > 115;
+```
+
+The `WITH` clause allows us to refer to th temp table in WHERE statement.
+
+```{sql connection = sakila_lite}
+WITH "Temp" AS(
+    SELECT "rating", AVG("length") AS "avg_length" 
+      FROM "film" GROUP BY "rating"
+  )
+  SELECT "rating", "avg_length" 
+    FROM "Temp"
+    WHERE "avg_length" = (SELECT MAX("avg_length") FROM "Temp")
+```
+
+However, not all database systems support `WITH` (most does). Then those situation, you need to repeart the query.
+
+```{sql connection = sakila_lite}
+SELECT "rating", "avg_length" 
+FROM (
+    SELECT "rating", AVG("length") AS "avg_length" 
+      FROM "film" GROUP BY "rating"
+  ) "Temp"
+WHERE "avg_length" = (
+  SELECT MAX("avg_length") FROM (
+    SELECT "rating", AVG("length") AS "avg_length" 
+    FROM "film" GROUP BY "rating"
+  ) "Temp2"
+)
+```
+
+### OVER
+
+Calculate the sum of "amount" for each store.
+
+```{sql connection = sakila_psql}
+SELECT "store_id", SUM("amount") 
+ FROM "rental" r 
+  JOIN "payment" p 
+  on r."rental_id" = p."rental_id"
+  JOIN "inventory" i 
+  on r."inventory_id" = i."inventory_id"
+  GROUP BY "store_id"
+```
+
+```{sql connection = sakila_psql}
+SELECT "store_id", "amount", SUM("amount") OVER (PARTITION BY "store_id")
+FROM
+(SELECT * FROM "rental" r 
+  JOIN "payment" p 
+  on r."rental_id" = p."rental_id"
+  JOIN "inventory" i 
+  on r."inventory_id" = i."inventory_id") table2
+```
+
+### SET Operators
+
+- UNION and UNION ALL – combine result set of two or more queries into a single result set using the UNION and UNION ALL operators.
+- INTERSECT  – return the intersection of two or more queries using the INTERSECT operator.
+- EXCEPT – subtract a result set from another result set using the EXCEPT operator
+
+```{sql connection = sakila_lite}
+SELECT * FROM "film" where "film_id" <= 3
+UNION
+SELECT * FROM "film" where "film_id" <= 4;
+```
+
+`UNION ALL` doesn't remove duplications
+
+```{sql connection = sakila_lite}
+SELECT * FROM "film" where "film_id" <= 3
+UNION ALL
+SELECT * FROM "film" where "film_id" <= 4;
+```
+
+```{sql connection = sakila_lite}
+SELECT * FROM "film" where "film_id" <= 5
+INTERSECT
+SELECT * FROM "film" where "film_id" >= 2;
+```
+
+```{sql connection = sakila_lite}
+SELECT * FROM "film" where "film_id" <= 5
+EXCEPT
+SELECT * FROM "film" where "film_id" >= 4;
+```
+
+
+
+### Table Manipulation
+
+```{r}
+# create a local empty SQLite database called mydb.sqlite
+mydb <- dbConnect(RSQLite::SQLite(), dbname = "mydb.sqlite")
+```
+
+- create table
+  
+```{r, eval = FALSE}
+mydb %>% dbCreateTable(
+  "table1",
+  tibble(fruit = character(0), count = integer(0))
+)
+mydb %>% dbReadTable("table1")
+```
+
+```{sql, connection = mydb, eval = FALSE}
+CREATE TABLE "table2" (
+    "id" int NOT NULL,
+    "last_name" varchar(255) NOT NULL,
+    "first_name" varchar(255),
+    "age" int,
+    PRIMARY KEY ("id")
+);
+```
+
+There is also `dbWriteTable` which exports the whole data frame as a table of the database.
+
+
+- delete a table permanently.
+
+```{sql connection = mydb, eval = FALSE}
+DROP TABLE "table2";
+```
+
+```{r, eval = FALSE}
+mydb %>% dbExecute('DROP TABLE "table2";')
+```
+
+```{r, eval = FALSE}
+drop_sql <- sqlInterpolate(mydb, "DROP TABLE ?tablename;", tablename = "table1")
+mydb %>% dbExecute(drop_sql)
+```
+
+Remark: the use of sqlInterpolate is to avoid SQL injection attack. Computerphile has a great video on this topic: https://www.youtube.com/watch?v=ciNHn38EyRc
+
+
+
+
+- INSERT – insert one or more rows into a table.
+
+```{r, eval = FALSE}
+mydb %>% dbAppendTable(
+  "table1",
+  tibble(fruit = "apple", count = 2))
+
+# alternatively
+insert_sql <- mydb %>% sqlAppendTable(
+  "table1",
+  tibble(fruit = "apple", count = 2), row.names = FALSE)
+mydb %>% dbExecute(insert_sql)
+
+mydb %>% dbReadTable("table1")
+```
+
+```{sql, connection = mydb, eval = FALSE}
+INSERT INTO 'table2' (id, last_name, first_name, age)
+  VALUES (1, "Lai", "Randy", 16);  
+```
+
+```{sql, connection = mydb, eval = FALSE}
+INSERT INTO 'table2' (id, last_name, first_name)
+  VALUES (2, "Lai", "Natalie");
+```
+
+```{r, eval = FALSE}
+mydb %>% dbReadTable("table2")
+```
+
+
+- UPDATE – update existing data in a table.
+
+```{r, eval = FALSE}
+mydb %>% dbExecute('UPDATE "table2" SET "age" = 33 WHERE "id" = 1;')
+```
+
+```{sql, connection = mydb, eval = FALSE}
+UPDATE "table2" SET "age" = 33 WHERE "id" = 1;
+```
+
+```{r, eval = FALSE}
+mydb %>% dbReadTable("table2")
+```
+
+- DELETE – delete data from a table permanently.
+
+```{r, eval = FALSE}
+mydb %>% dbExecute('DELETE FROM "table2" WHERE "id" = 1;')
+```
+
+```{sql, connection = mydb, eval = FALSE}
+DELETE FROM "table2" WHERE "id" = 1;
+```
+
+```{r, eval = FALSE}
+mydb %>% dbReadTable("table2")
+```
+
+# Reference
+
+- SQL Tutorial https://www.sqltutorial.org/
