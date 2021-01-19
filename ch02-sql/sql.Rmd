@@ -11,7 +11,7 @@ library(DBI)
 ```
 
 ```{r, echo = FALSE}
-# to suppress the object not found error when kniting
+# to suppress the object not found error when knitting
 mydb <- NULL
 ```
 
@@ -48,12 +48,12 @@ The database is called `sakila.sqlite`. You could either git clone from lectures
 ```{r}
 if (!file.exists("sakila.sqlite") || file.size("sakila.sqlite") == 0) {
   download.file(
-    "https://github.com/ucdavis-sta141b-sq-2020/sta141b-notes/raw/master/ch02-sql/sakila.sqlite", 
+    "https://github.com/ucdavis-sta141b-2021-winter/sta141b-lectures/raw/master/ch02-sql/sakila.sqlite", 
     destfile = "sakila.sqlite")
 }
 ```
 
-The file format is `.sqlite` which is one of the very common relational database formats, espeically for simple problems.
+The file format is `.sqlite` which is one of the very common relational database formats, especially for simple problems.
 
 ```{r}
 sakila_lite <- dbConnect(RSQLite::SQLite(), dbname = "sakila.sqlite")
@@ -77,7 +77,6 @@ sakila_psql %>% dbListTables()
 ### MySQL
 
 MySQL (MariaDB)) is another popular RDBMS.
-
 
 ```{r}
 sakila_mysql <- dbConnect(RMariaDB::MariaDB(),
