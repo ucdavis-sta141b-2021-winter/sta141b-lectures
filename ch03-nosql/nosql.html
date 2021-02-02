@@ -194,6 +194,14 @@ summary {
 </div>
 
 
+<div id="rational-dbs-vs-nosql-databases" class="section level1">
+<h1>Rational DBs vs Nosql Databases</h1>
+<p>The most common type of nosql databases is document database.</p>
+<ul>
+<li>table vs collection</li>
+<li>row vs document</li>
+</ul>
+</div>
 <div id="types-of-nosql-dbs." class="section level1">
 <h1>Types of NoSQL DBs.</h1>
 <ul>
@@ -208,27 +216,20 @@ summary {
 <li><a href="https://neo4j.com/developer/graph-db-vs-nosql/" class="uri">https://neo4j.com/developer/graph-db-vs-nosql/</a></li>
 </ul>
 </div>
-<div id="terminology" class="section level1">
-<h1>Terminology</h1>
-<p>Rational DBs vs Document Databases</p>
-<ul>
-<li>table vs collection</li>
-<li>row vs document</li>
-</ul>
-</div>
 <div id="airbnb-sample-data" class="section level1">
 <h1>Airbnb sample data</h1>
+<p>MongoDB is the most popular NOSQL database.</p>
 <p><a href="https://docs.atlas.mongodb.com/sample-data/sample-airbnb/" class="uri">https://docs.atlas.mongodb.com/sample-data/sample-airbnb/</a></p>
 <p>To connect to this MongoDB, you need to either on the campus network or connect via UCDavis VPN.</p>
 <pre class="r"><code>library(tidyverse)</code></pre>
-<pre><code>## ── Attaching packages ───────────────── tidyverse 1.3.0 ──</code></pre>
-<pre><code>## ✓ ggplot2 3.3.1     ✓ purrr   0.3.4
-## ✓ tibble  3.0.3     ✓ dplyr   1.0.2
-## ✓ tidyr   1.1.0     ✓ stringr 1.4.0
-## ✓ readr   1.3.1     ✓ forcats 0.5.0</code></pre>
-<pre><code>## ── Conflicts ──────────────────── tidyverse_conflicts() ──
-## x dplyr::filter() masks stats::filter()
-## x dplyr::lag()    masks stats::lag()</code></pre>
+<pre><code>## ── Attaching packages ─────────────────────────────────────── tidyverse 1.3.0 ──</code></pre>
+<pre><code>## ✔ ggplot2 3.3.1     ✔ purrr   0.3.4
+## ✔ tibble  3.0.3     ✔ dplyr   1.0.2
+## ✔ tidyr   1.1.0     ✔ stringr 1.4.0
+## ✔ readr   1.3.1     ✔ forcats 0.5.0</code></pre>
+<pre><code>## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+## ✖ dplyr::filter() masks stats::filter()
+## ✖ dplyr::lag()    masks stats::lag()</code></pre>
 <pre class="r"><code>library(mongolite)
 
 m &lt;- mongo(&quot;airbnb&quot;, db = &quot;data&quot;, url = &quot;mongodb://mongouser:secret@alan.ucdavis.edu/data&quot;)</code></pre>
@@ -282,7 +283,7 @@ first_doc %&gt;% glimpse()</code></pre>
 ## $ availability          &lt;df[,4]&gt; &lt;data.frame[1 x 4]&gt;
 ## $ review_scores         &lt;df[,7]&gt; &lt;data.frame[1 x 7]&gt;
 ## $ reviews               &lt;list&gt; [&lt;data.frame[51 x 6]&gt;]</code></pre>
-<pre class="r"><code># filter fileds
+<pre class="r"><code># filter fields
 m$find(&quot;{}&quot;, fields = &#39;{&quot;name&quot;: true}&#39;)</code></pre>
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
@@ -296,7 +297,7 @@ m$find(&#39;{&quot;price&quot;: {&quot;$lt&quot;: 20}}&#39;, fields = &#39;{&quo
 {"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["_id"],"name":[1],"type":["chr"],"align":["left"]},{"label":["name"],"name":[2],"type":["chr"],"align":["left"]},{"label":["price"],"name":[3],"type":["dbl"],"align":["right"]}],"data":[{"1":"10716793","2":"DOUBLE ROOM for 1 or 2 ppl","3":"15","_rn_":"1"},{"1":"13261391","2":"Habitación doble al lado de La Pedrera","3":"18","_rn_":"2"},{"1":"13521222","2":"Rumo","3":"17","_rn_":"3"},{"1":"13579065","2":"**YOUR ROOM IN OPORTO**","3":"14","_rn_":"4"},{"1":"14758068","2":"Room on spacious appartment","3":"9","_rn_":"5"},{"1":"15095488","2":"Bonita habitacion centrica-Sagrada Familia","3":"18","_rn_":"6"},{"1":"15284591","2":"COMFORTABLE AND IN THE CENTER.","3":"18","_rn_":"7"},{"1":"15320378","2":"Hab. individual en Barcelona / Single room in Bcn","3":"15","_rn_":"8"},{"1":"15353532","2":"Nice room in artistic apartment, very central","3":"15","_rn_":"9"},{"1":"16479542","2":"PRIVATE ROOM WITH WIFI","3":"18","_rn_":"10"},{"1":"17083946","2":"Arc del Triomf - Big double room in authentic flat","3":"19","_rn_":"11"},{"1":"17573977","2":"Bright room in sagrada familia","3":"15","_rn_":"12"},{"1":"17651165","2":"Single room: idealy for student or 1 traveler","3":"19","_rn_":"13"},{"1":"18121163","2":"Heart of the City-Cozy Room Private Sunny Balcony!","3":"14","_rn_":"14"},{"1":"18219254","2":"Cozy room in Sagrada Familia","3":"15","_rn_":"15"},{"1":"18925556","2":"H MERIDIANA 1","3":"19","_rn_":"16"},{"1":"19172215","2":"Brand new Poble Sec design flat next to Montjuïc","3":"15","_rn_":"17"},{"1":"19741944","2":"Habitación individual.","3":"14","_rn_":"18"},{"1":"19865003","2":"Single room Barcelona center","3":"17","_rn_":"19"},{"1":"19904358","2":"Good room","3":"13","_rn_":"20"},{"1":"20307844","2":"Single Room Near the City Centre","3":"17","_rn_":"21"},{"1":"20611485","2":"Cómoda Habitación L'Eixample, Gracia","3":"10","_rn_":"22"},{"1":"20669488","2":"Cozy double room in Barcelona close to beach","3":"17","_rn_":"23"},{"1":"21056118","2":"Cosy interior room for 2! I CA","3":"15","_rn_":"24"},{"1":"21563508","2":"Stylish 1 bed flat with balcony in Montjüic","3":"15","_rn_":"25"},{"1":"22042206","2":"Spacious bright single bedroom","3":"15","_rn_":"26"},{"1":"23003772","2":"(C)Private double Bedroom next to metro. Free WiFi","3":"15","_rn_":"27"},{"1":"23003982","2":"Bright room at the other side of the river","3":"16","_rn_":"28"},{"1":"23509818","2":"affordable living","3":"16","_rn_":"29"},{"1":"23763097","2":"Private Room's \"Gaya\" (Nº2) Low-Cost","3":"15","_rn_":"30"},{"1":"23766166","2":"Private Room's \"Gaya\" (Nº3) Low-Cost","3":"15","_rn_":"31"},{"1":"23803557","2":"Habitación cerca a Sagrada Familia","3":"18","_rn_":"32"},{"1":"24333246","2":"C4 Big Room in Oporto ( near Casa da Música)","3":"17","_rn_":"33"},{"1":"24450419","2":"Quarto 1 do AL Hostel D.ª Jucunda","3":"12","_rn_":"34"},{"1":"24461559","2":"Beautiful room at Tibidabbo","3":"17","_rn_":"35"},{"1":"24917821","2":"Chambre privée au coeur de Rosemont","3":"16","_rn_":"36"},{"1":"25437034","2":"Quarto partilhado do Porto! (1)","3":"15","_rn_":"37"},{"1":"26287233","2":"Moradia Igreja de Paranhos - 2","3":"14","_rn_":"38"},{"1":"26556751","2":"Quarto moradia luxo","3":"15","_rn_":"39"},{"1":"26563602","2":"Quarto moradia luxo","3":"13","_rn_":"40"},{"1":"26892349","2":"Home Sharing - Individual Room in Plaza España","3":"16","_rn_":"41"},{"1":"27667701","2":"Nashs house 2","3":"19","_rn_":"42"},{"1":"28377485","2":"Hostel orquidea feminino 2","3":"17","_rn_":"43"},{"1":"28493488","2":"Shiny Cottage","3":"13","_rn_":"44"},{"1":"28557881","2":"hostel orquidea feminino 3","3":"17","_rn_":"45"},{"1":"28680187","2":"Nice room for city visitors","3":"19","_rn_":"46"},{"1":"28825704","2":"Habitación para dormir con cama de matrimonio","3":"15","_rn_":"47"},{"1":"29821133","2":"Private Suite Double Bed","3":"15","_rn_":"48"},{"1":"30179953","2":"Quarto  Póvoa de Varzim  somente para mulheres","3":"17","_rn_":"49"},{"1":"30882652","2":"Cozy room near Montjuic and city center","3":"16","_rn_":"50"},{"1":"31305846","2":"Private room with sunny terrace of 200m2. 6","3":"10","_rn_":"51"},{"1":"31391139","2":"Close to EELS rugby club n CBD","3":"14","_rn_":"52"},{"1":"31867873","2":"Quiet & Cozy","3":"18","_rn_":"53"},{"1":"31921047","2":"ESPECTACULAR Vista Con Terraza MONTAŃA, Luminoso","3":"15","_rn_":"54"},{"1":"3238474","2":"ALQUILER  HABITACIONES mir","3":"16","_rn_":"55"},{"1":"32636126","2":"Near the RAMBLA, the double room at  SEASIDE PORT1","3":"10","_rn_":"56"},{"1":"333190","2":"Room,  Bikes and views!  SGL-DBL","3":"18","_rn_":"57"},{"1":"4031809","2":"Prewar classic NYC apartment.","3":"16","_rn_":"58"},{"1":"6583887","2":"E-House Relógio - 2C","3":"13","_rn_":"59"},{"1":"7168578","2":"Habitacion individual para 1 person","3":"15","_rn_":"60"},{"1":"8521963","2":"Habitación privada","3":"12","_rn_":"61"},{"1":"8537109","2":"Library Room 1 Rambla Catalunya","3":"17","_rn_":"62"},{"1":"95560","2":"La Sagrada Familia (and metro) 4 blocks!","3":"15","_rn_":"63"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
-<p>Check for all the opeartors: <a href="https://docs.mongodb.com/manual/reference/operator/query-comparison/#query-selectors-comparison" class="uri">https://docs.mongodb.com/manual/reference/operator/query-comparison/#query-selectors-comparison</a></p>
+<p>Check for all the operators: <a href="https://docs.mongodb.com/manual/reference/operator/query-comparison/#query-selectors-comparison" class="uri">https://docs.mongodb.com/manual/reference/operator/query-comparison/#query-selectors-comparison</a></p>
 <pre class="r"><code>m$find(&#39;{&quot;price&quot;: {&quot;$lt&quot;: 50}, &quot;bedrooms&quot;: {&quot;$gte&quot;: 3}, &quot;amenities&quot;: &quot;Wifi&quot;}&#39;,
   fields = &#39;{&quot;name&quot;: true, &quot;price&quot;: true, &quot;bedrooms&quot;: true}&#39;
 )</code></pre>
@@ -305,6 +306,7 @@ m$find(&#39;{&quot;price&quot;: {&quot;$lt&quot;: 20}}&#39;, fields = &#39;{&quo
 {"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["_id"],"name":[1],"type":["chr"],"align":["left"]},{"label":["name"],"name":[2],"type":["chr"],"align":["left"]},{"label":["bedrooms"],"name":[3],"type":["int"],"align":["right"]},{"label":["price"],"name":[4],"type":["dbl"],"align":["right"]}],"data":[{"1":"12400621","2":"Elegant suite in historic center","3":"5","4":"42","_rn_":"1"},{"1":"13252758","2":"Vacances de reve à Espinho (Porto)","3":"3","4":"45","_rn_":"2"},{"1":"18617060","2":"Private Sunny Room in Bushwick","3":"3","4":"30","_rn_":"3"},{"1":"19760228","2":"Apartment Salva - 3 bedroom in Poble Sec","3":"3","4":"46","_rn_":"4"},{"1":"20045679","2":"House Near Espinho/Santa Maria Feira","3":"3","4":"30","_rn_":"5"},{"1":"21883829","2":"Terraço","3":"4","4":"40","_rn_":"6"},{"1":"22610083","2":"Logement parfait pour étudiants proche du metro","3":"3","4":"25","_rn_":"7"},{"1":"24074680","2":"Espaço Palmeiras","3":"3","4":"40","_rn_":"8"},{"1":"26664547","2":"Charmy 3 bedrooms apartment in Sarrià-Sant Gervasi","3":"3","4":"35","_rn_":"9"},{"1":"27745034","2":"Beste Lage im Herzen Barcelonas Playa Espanya*****","3":"3","4":"45","_rn_":"10"},{"1":"28653236","2":"3-Bedroom Apartment With Big Terrace","3":"3","4":"41","_rn_":"11"},{"1":"29148942","2":"Old times by the sea","3":"3","4":"45","_rn_":"12"},{"1":"29341373","2":"The Candle apartment (3 bedrooms), Appt Bougie,RC.","3":"3","4":"46","_rn_":"13"},{"1":"32037744","2":"Ideal apartment for families. With gorgeous views","3":"3","4":"40","_rn_":"14"},{"1":"46626","2":"Charming MtlHomestay Accommodation!","3":"4","4":"47","_rn_":"15"},{"1":"571382","2":"Porto Leça Beach Flat in Matosinhos","3":"3","4":"39","_rn_":"16"},{"1":"7349008","2":"The Porto Concierge  Mesquita Lodge","3":"3","4":"40","_rn_":"17"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
+<p>Remark: As <code>amenities</code> is an array, “amenities”: “Wifi” means Wifi is one of the amenities. On the other hand, `<code>&quot;amenities&quot;: [&quot;Wifi&quot;]</code> means Wifi is the only amenity.`</p>
 <pre class="r"><code># sort
 m$find(&#39;{&quot;bedrooms&quot;: {&quot;$gte&quot;: 4}}&#39;,
   fields = &#39;{&quot;name&quot;: true, &quot;price&quot;: true}&#39;,

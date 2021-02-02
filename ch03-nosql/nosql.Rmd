@@ -6,8 +6,15 @@ output:
 ---
 
 
-# Types of NoSQL DBs.
 
+# Rational DBs vs Nosql Databases
+
+The most common type of nosql databases is document database.
+
+- table vs collection
+- row vs document
+
+# Types of NoSQL DBs.
 
 - **Key-value stores** are the simplest. Every item in the database is stored as an attribute name (or "key") together with its value. Riak, Voldemort, and Redis are the most well-known in this category.
 - **Wide-column stores** store data together as columns instead of rows and are optimized for queries over large datasets. The most popular are Cassandra and HBase.
@@ -20,18 +27,11 @@ Some references:
 - https://neo4j.com/developer/graph-db-vs-nosql/
 
 
-# Terminology
-
-Rational DBs vs Document Databases
-
-- table vs collection
-- row vs document
-
 # Airbnb sample data
 
+MongoDB is the most popular NOSQL database.
 
 https://docs.atlas.mongodb.com/sample-data/sample-airbnb/
-
 
 To connect to this MongoDB, you need to either on the campus network or connect via UCDavis VPN.
 
@@ -65,7 +65,7 @@ first_doc %>% glimpse()
 ```
 
 ```{r}
-# filter fileds
+# filter fields
 m$find("{}", fields = '{"name": true}')
 ```
 
@@ -74,7 +74,7 @@ m$find("{}", fields = '{"name": true}')
 m$find('{"price": {"$lt": 20}}', fields = '{"name": true, "price": true}')
 ```
 
-Check for all the opeartors: https://docs.mongodb.com/manual/reference/operator/query-comparison/#query-selectors-comparison
+Check for all the operators: https://docs.mongodb.com/manual/reference/operator/query-comparison/#query-selectors-comparison
 
 ```{r}
 m$find('{"price": {"$lt": 50}, "bedrooms": {"$gte": 3}, "amenities": "Wifi"}',
@@ -82,6 +82,7 @@ m$find('{"price": {"$lt": 50}, "bedrooms": {"$gte": 3}, "amenities": "Wifi"}',
 )
 ```
 
+Remark: As `amenities` is an array, "amenities": "Wifi" means Wifi is one of the amenities. On the other hand, ``"amenities": ["Wifi"]` means Wifi is the only amenity.`
 
 ```{r}
 # sort
