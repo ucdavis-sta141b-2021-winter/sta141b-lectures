@@ -1,0 +1,22 @@
+[
+  {
+    "Name": "Mario",
+    "Age": 32,
+    "Occupation": "Plumber",
+    "Ranking": 3
+  },
+  {
+    "Name": "Peach",
+    "Age": 21,
+    "Occupation": "Princess",
+    "Ranking": 1
+  },
+  {
+    "Ranking": 2
+  },
+  {
+    "Name": "Bowser",
+    "Occupation": "Koopa",
+    "Ranking": 4
+  }
+]

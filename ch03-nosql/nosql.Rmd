@@ -1,0 +1,296 @@
+---
+title: "NoSQL"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+# Types of NoSQL DBs.
+
+
+- **Key-value stores** are the simplest. Every item in the database is stored as an attribute name (or "key") together with its value. Riak, Voldemort, and Redis are the most well-known in this category.
+- **Wide-column stores** store data together as columns instead of rows and are optimized for queries over large datasets. The most popular are Cassandra and HBase.
+- **Document databases** pair each key with a complex data structure known as a document. Documents can contain many different key-value pairs, or key-array pairs, or even nested documents. MongoDB is the most popular of these databases.
+- **Graph databases** are used to store information about networks, such as social connections. Examples are Neo4J and HyperGraphDB.
+
+Some references:
+
+- https://www.mongodb.com/scale/types-of-nosql-databases
+- https://neo4j.com/developer/graph-db-vs-nosql/
+
+
+# Terminology
+
+Rational DBs vs Document Databases
+
+- table vs collection
+- row vs document
+
+# Airbnb sample data
+
+
+https://docs.atlas.mongodb.com/sample-data/sample-airbnb/
+
+
+To connect to this MongoDB, you need to either on the campus network or connect via UCDavis VPN.
+
+```{r}
+library(tidyverse)
+library(mongolite)
+
+m <- mongo("airbnb", db = "data", url = "mongodb://mongouser:secret@alan.ucdavis.edu/data")
+```
+
+```{r}
+# total number of documents
+m$count()
+```
+
+
+```{r}
+# total number of documents satisfying a condition
+m$count('{"price": {"$lt": 20}}')
+```
+
+
+Query Documents
+https://docs.mongodb.com/manual/tutorial/query-documents/
+
+
+```{r}
+# find the first document
+first_doc <- m$find("{}", limit = 1)
+first_doc %>% glimpse()
+```
+
+```{r}
+# filter fileds
+m$find("{}", fields = '{"name": true}')
+```
+
+```{r}
+# filter keys
+m$find('{"price": {"$lt": 20}}', fields = '{"name": true, "price": true}')
+```
+
+Check for all the opeartors: https://docs.mongodb.com/manual/reference/operator/query-comparison/#query-selectors-comparison
+
+```{r}
+m$find('{"price": {"$lt": 50}, "bedrooms": {"$gte": 3}, "amenities": "Wifi"}',
+  fields = '{"name": true, "price": true, "bedrooms": true}'
+)
+```
+
+
+```{r}
+# sort
+m$find('{"bedrooms": {"$gte": 4}}',
+  fields = '{"name": true, "price": true}',
+  sort = '{"price": -1}',
+  limit = 5
+)
+```
+
+
+## Query nested fields
+
+```{r}
+countrydf <- m$find(
+  '{"address.country_code": "US"}',
+  fields = '{"name": true, "address.country": true}'
+)
+countrydf
+```
+
+```{r}
+names(countrydf)
+```
+
+```{r}
+countrydf %>% pull(address) %>% pull(country)
+```
+
+```{r}
+countrydf %>%
+  mutate(country = address$country, address = NULL)
+```
+
+
+
+## Query an array
+
+```{r}
+# find all documents where amenities contain both Oven and Refrigerator
+m$find('{"amenities": {"$all": ["Oven", "Refrigerator"]}}',
+       fields = '{"name": true, "amenities": true}')
+```
+
+PS: you could also use the `$and` operator.
+
+
+```{r}
+# find all documents where amenities contain Oven or Refrigerator or both
+m$find('{"amenities": {"$in": ["Oven", "Refrigerator"]}}',
+       fields = '{"name": true, "amenities": true}')
+```
+PS: you could also use the `$or` operator.
+
+
+## Regular expressions (come back to this later)
+
+```{r}
+m$find('{"name": {"$regex": "\\\\bsea\\\\b", "$options": "i"}}', fields = '{"name": true}')
+```
+
+## Iteration
+
+```{r}
+it <- m$iterate('{"price": {"$lt": 12}}')
+while (TRUE) {
+  x <- it$one()
+  if (is.null(x)) break
+  cat(x$name, "\n")
+}
+```
+
+Examine raw JSON
+```{r}
+it <- m$iterate('{"price": {"$lt": 12}}')
+```
+
+```{r, eval = FALSE}
+it$json()
+```
+
+
+
+## Aggregate
+
+The aggregation pipeline is a framework for data aggregation modeled on the concept of data processing pipelines.
+
+In the following code, there are three stages
+
+- filter the data
+- group by and summerize
+- arrange data
+
+```{json eval = FALSE, include = FALSE}
+[
+  {
+    "$match": {
+      "$and": [
+        {"bedrooms": {"$ne": null}}, 
+        {"bedrooms": {"$ne": 0}}
+      ]
+    }
+  },
+  {
+    "$group": { 
+      "_id": "$bedrooms", 
+      "price": { "$avg": "$price" }}
+  },
+  {"$sort": { "_id": 1}}
+]
+```
+
+
+```{r}
+m$aggregate('[
+  {
+    "$match": {
+      "$and": [
+        {"bedrooms": {"$ne": null}}, 
+        {"bedrooms": {"$ne": 0}}
+      ]
+    }
+  },
+  {
+    "$group": { 
+      "_id": "$bedrooms", 
+      "price": { "$avg": "$price" }}
+  },
+  {"$sort": { "_id": 1}}
+]')
+```
+
+Another way to specify the same query
+```{r}
+m$aggregate('[
+  {"$match": {"bedrooms": {"$ne": null, "$ne": 0}}},
+  {"$group": { "_id": "$bedrooms", "price": { "$avg": "$price" }}},
+  {"$sort": { "_id": 1}}
+]')
+```
+
+
+```{json, eval = FALSE, include = FALSE}
+[
+  {"$match": {"bedrooms": {"$ne": null, "$ne": 0}}},
+  {"$group": { "_id": "$bedrooms", "price": { "$avg": "$price" }}},
+  {"$project": {
+    "_id": false,
+    "bedrooms": "$_id",
+    "price": true
+  }},
+  {"$sort": {"bedrooms": 1}}
+]
+```
+
+
+User the `$project` stage to rename `_id`.
+```{r}
+m$aggregate('[
+  {"$match": {"bedrooms": {"$ne": null, "$ne": 0}}},
+  {"$group": { "_id": "$bedrooms", "price": { "$avg": "$price" }}},
+  {"$project": {
+    "_id": false,
+    "bedrooms": "$_id",
+    "price": true
+  }},
+  {"$sort": {"bedrooms": 1}}
+]')
+```
+
+Group by two variables
+```{r}
+m$aggregate('[
+  {"$match": {"bedrooms": {"$ne": null, "$ne": 0}}},
+  {"$group": {
+    "_id": {"property_type": "$property_type", "bedrooms": "$bedrooms"},
+    "price": { "$sum": "$price" }}},
+  {"$project": {
+    "_id": false,
+    "property_type": "$_id.property_type",
+    "bedrooms": "$_id.bedrooms",
+    "price": true
+  }},
+  {"$sort": {"property_type": 1, "bedrooms": 1}}
+]')
+```
+
+Compute the average price per room grouped by property_type
+
+```{r}
+m$aggregate('[
+  {"$match": {"bedrooms": {"$ne": null, "$ne": 0}}},
+  {"$project": {
+    "property_type": "$property_type",
+    "bedrooms": "$bedrooms",
+    "price_per_room": {"$divide": ["$price", "$bedrooms"]}
+  }},
+  {"$group": {
+    "_id": "$property_type",
+    "ave_bedrooms": { "$avg": "$bedrooms" },
+    "price_per_room": { "$avg": "$price_per_room" }}
+  },
+  {"$project": {
+    "_id": false,
+    "property_type": "$_id",
+    "ave_bedrooms": true,
+    "price_per_room": true
+  }},
+  {"$sort": {"property_type": 1}}
+]')
+```
+

@@ -1,0 +1,169 @@
+---
+title: "Json"
+output: 
+  html_document: 
+    toc: yes
+---
+
+# Getting started with JSON
+
+```{r}
+library(tidyverse)
+library(jsonlite)
+```
+
+JavaScript Object Notation (JSON) is an open-standard file format or data interchange format that uses human-readable text to transmit data objects consisting of attribute–value pairs and array data types.
+
+```json
+{
+  "firstName": "John",
+  "lastName": "Smith",
+  "isAlive": true,
+  "age": 27,
+  "address": {
+    "streetAddress": "21 2nd Street",
+    "city": "New York",
+    "state": "NY",
+    "postalCode": "10021-3100"
+  },
+  "phoneNumbers": [
+    {
+      "type": "home",
+      "number": "212 555-1234"
+    },
+    {
+      "type": "office",
+      "number": "646 555-4567"
+    },
+    {
+      "type": "mobile",
+      "number": "123 456-7890"
+    }
+  ],
+  "children": [],
+  "spouse": null
+}
+```
+
+
+In JSON, values must be one of the following data types:
+
+- a string
+- a number
+- an object (JSON object)
+- an array
+- a boolean
+- null
+
+
+## Parsing JSON
+
+```{r}
+txt <- '[12, 3, 7]'
+x <- fromJSON(txt)
+x
+```
+
+```{r}
+txt <- '{"apple": 1, "banana": 2}'
+x <- fromJSON(txt)
+x
+```
+
+
+```{r, eval = FALSE}
+# from file
+example <- fromJSON("example.json")
+# from the web
+hello <- fromJSON("https://www.example.com/hello.json")
+```
+
+
+## Simplification
+
+Simplification is the process where JSON arrays automatically get converted from a list into a more specific R class. The `fromJSON` function has 3 arguments which control the simplification process: `simplifyVector`, `simplifyDataFrame` and `simplifyMatrix`. Each one is enabled by default.
+
+| JSON structure        | Example JSON data                                        | Simplifies to R class | Argument in fromJSON | 
+| ----------------------|----------------------------------------------------------|-----------------------|----------------------|
+| Array of primitives   | `["Amsterdam", "Rotterdam", "Utrecht", "Den Haag"]`      | Atomic Vector         | simplifyVector       | 
+| Array of objects      | `[{"name":"Erik", "age":43}, {"name":"Anna", "age":32}]` | Data Frame            | simplifyDataFrame    | 
+| Array of arrays       | `[ [1, 2, 3], [4, 5, 6] ]`                               | Matrix                | simplifyMatrix       |
+
+
+### Atomic Vectors
+
+When `simplifyVector` is enabled, JSON arrays containing **primitives** (strings, numbers, booleans or null) simplify into an atomic vector:
+
+```{r}
+# A JSON array of primitives
+json <- '["Mario", "Peach", null, "Bowser"]'
+# Simplifies into an atomic vector
+fromJSON(json)
+```
+
+Without simplification, any JSON array turns into a list: 
+
+```{r}
+# No simplification:
+fromJSON(json, simplifyVector = FALSE)
+```
+
+
+### Data Frames
+
+When `simplifyDataFrame` is enabled, JSON arrays containing **objects** (key-value pairs) simplify into a data frame:
+
+```{r}
+json <-
+'[
+  {"Name" : "Mario", "Age" : 32, "Occupation" : "Plumber"}, 
+  {"Name" : "Peach", "Age" : 21, "Occupation" : "Princess"},
+  {},
+  {"Name" : "Bowser", "Occupation" : "Koopa"}
+]'
+mydf <- fromJSON(json)
+mydf
+```
+
+The data frame gets converted back into the original JSON structure by `toJSON` (whitespace and line breaks are ignorable in JSON).
+
+```{r}
+mydf$Ranking <- c(3, 1, 2, 4)
+```
+
+```{r}
+ cat(toJSON(mydf, pretty = TRUE), file = "example2.json")
+```
+Hence you can go back and forth between dataframes and JSON, without any manual data restructuring.
+
+
+### Matrices and Arrays
+
+When `simplifyMatrix` is enabled, JSON arrays containing **equal-length sub-arrays** simplify into a matrix (or higher order R array):
+
+```{r}
+json <- '[
+  [1, 2, 3, 4],
+  [5, 6, 7, 8],
+  [9, 10, 11, 12]
+]'
+mymatrix <- fromJSON(json)
+mymatrix
+```
+
+Again, we can use `toJSON` to convert the matrix or array back into the original JSON structure:
+
+```{r}
+toJSON(mymatrix, pretty = TRUE)
+```
+
+```{r}
+fromJSON(json, simplifyMatrix = FALSE)
+```
+
+
+# Reference
+
+jsonlite quick start: https://cran.r-project.org/web/packages/jsonlite/vignettes/json-aaquickstart.html
+jsonlite apis: https://cran.r-project.org/web/packages/jsonlite/vignettes/json-apis.html
+
