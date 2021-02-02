@@ -36,6 +36,8 @@
 | 01-05 | Introduction                  | [introduction](README.md)                                                                     |
 | 01-07 | [dplyr](ch01-dplyr/dplyr.Rmd) | [dplyr](https://ucdavis-sta141b-2021-winter.github.io/sta141b-lectures/ch01-dplyr/dplyr.html) |
 | 01-19 | [sql](ch02-sql/sql.Rmd)       | [sql](https://ucdavis-sta141b-2021-winter.github.io/sta141b-lectures/ch02-sql/sql.html)       |
+| 02-01 | [json](ch03-nosql/json.Rmd)   | [json](https://ucdavis-sta141b-2021-winter.github.io/sta141b-lectures/ch03-nosql/json.html)   |
+|       | [nosql](ch03-nosql/nosql.Rmd) | [nosql](https://ucdavis-sta141b-2021-winter.github.io/sta141b-lectures/ch03-nosql/nosql.html) |
 
 ## Links
 
