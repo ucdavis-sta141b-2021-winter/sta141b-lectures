@@ -1,0 +1,101 @@
+---
+title: "Shiny Web Apps"
+output: 
+  html_document: 
+    toc: yes
+---
+
+
+Shiny is an R package that makes it easy to build interactive web apps straight from R.
+
+You can host 
+- standalone apps on a webpage
+- embed them in R Markdown documents
+- build dashboards
+
+I highly recommend you to visit https://shiny.rstudio.com/ for the documentation and gallery.
+
+
+## Host
+
+There are multiple way to host a shiny app.
+
+- Install shiny server on a computer that you own
+- Upload your app to https://www.shinyapps.io/
+  - Each month you have 25 free active hours
+  - Maximum 5 apps for free
+- Google Cloud Run
+
+
+## First Shiny App
+
+There are couple ways to create an shiny app (we are going to focus on RStudio).
+
+- File -> New File -> Shiny Web App
+  - Single file (recommanded)
+  - Multiple files (essentially the same as single file, but two files)
+- File -> New File -> R Markdown -> Shiny
+- File -> New File -> R Markdown -> From Template -> Flex Dashboard (if `flexdashboard` was installed.)
+
+## Basic Struture
+
+
+```{r, eval = FALSE}
+ui <- fluidPage(
+  # controls the layout and content of the application
+)
+
+
+server <- function(input, output) {
+  # controls the interaction, modifly output based on user input
+}
+
+# run the application 
+shinyApp(ui = ui, server = server)
+```
+
+
+We are going to use the tutorial in https://github.com/rstudio-education/shiny.rstudio.com-tutorial
+
+
+## Input and Output
+
+| Input                         |
+| ----                          |
+| checkboxInput                 |
+| dateInput                     |
+| dateRangeInput                |
+| fileInput                     |
+| numericInput                  |
+| selectInput                   |
+| varSelectInput                |
+| sliderInput                   |
+| textInput                     |
+| textAreaInput                 |
+| passwordInput                 |
+
+| Output                        | Render          |
+| ----                          | ---             |
+| uiOutput                      | renderUI        |
+| imageOutput                   | renderImage     |
+| plotOutput                    | renderPlot      |
+| tableOutput                   | renderTable     |
+| dataTableOutput               | renderDataTable |
+| textOutput/verbatimTextOutput | renderText/renderPrint      |
+
+
+## Reactivity
+
+Reactivity maybe the most challenging part of learning shiny!
+
+- `reactive()`
+- `observe()` and `observeEvent()`
+- `eventReactive()`
+- `isolate()`
+- `reactiveVal()` and `reactiveValues()`
+- `req()` and `need()`
+
+
+## Basic HTML elements
+
+https://www.learn-html.org/en/Basic_Elements
