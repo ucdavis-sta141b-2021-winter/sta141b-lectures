@@ -82,7 +82,7 @@ m$find('{"price": {"$lt": 50}, "bedrooms": {"$gte": 3}, "amenities": "Wifi"}',
 )
 ```
 
-Remark: As `amenities` is an array, "amenities": "Wifi" means Wifi is one of the amenities. On the other hand, ``"amenities": ["Wifi"]` means Wifi is the only amenity.`
+Remark: As `amenities` is an array, `"amenities": "Wifi"` means Wifi is one of the amenities. On the other hand, `"amenities": ["Wifi"]` means Wifi is the only amenity.
 
 ```{r}
 # sort
@@ -105,7 +105,7 @@ countrydf
 ```
 
 ```{r}
-names(countrydf)
+countrydf$address$country
 ```
 
 ```{r}
@@ -116,7 +116,11 @@ countrydf %>% pull(address) %>% pull(country)
 countrydf %>%
   mutate(country = address$country, address = NULL)
 ```
-
+```{r}
+countrydf %>% 
+  bind_cols(countrydf$address) %>% 
+  select(-address)
+```
 
 
 ## Query an array
@@ -129,6 +133,12 @@ m$find('{"amenities": {"$all": ["Oven", "Refrigerator"]}}',
 
 PS: you could also use the `$and` operator.
 
+```{r}
+# find all documents where amenities contain both Oven and Refrigerator
+m$find('{"$and": [{"amenities": "Oven"}, {"amenities": "Refrigerator"}]}',
+       fields = '{"name": true, "amenities": true}')
+```
+
 
 ```{r}
 # find all documents where amenities contain Oven or Refrigerator or both
@@ -137,6 +147,11 @@ m$find('{"amenities": {"$in": ["Oven", "Refrigerator"]}}',
 ```
 PS: you could also use the `$or` operator.
 
+```{r}
+# find all documents where amenities contain both Oven and Refrigerator
+m$find('{"$or": [{"amenities": "Oven"}, {"amenities": "Refrigerator"}]}',
+       fields = '{"name": true, "amenities": true}')
+```
 
 ## Regular expressions (come back to this later)
 
@@ -147,6 +162,10 @@ m$find('{"name": {"$regex": "\\\\bsea\\\\b", "$options": "i"}}', fields = '{"nam
 ## Iteration
 
 ```{r}
+m$find('{"price": {"$lt": 12}}')
+```
+
+```{r}
 it <- m$iterate('{"price": {"$lt": 12}}')
 while (TRUE) {
   x <- it$one()
@@ -155,20 +174,29 @@ while (TRUE) {
 }
 ```
 
+By batch
+
+```{r}
+it <- m$iterate('{"price": {"$lt": 12}}')
+res <- it$batch(size = 2)
+```
+
 Examine raw JSON
+
 ```{r}
 it <- m$iterate('{"price": {"$lt": 12}}')
 ```
 
-```{r, eval = FALSE}
-it$json()
+```{r}
+j <- it$json(size = 1)
 ```
-
 
 
 ## Aggregate
 
 The aggregation pipeline is a framework for data aggregation modeled on the concept of data processing pipelines.
+
+https://docs.mongodb.com/manual/reference/operator/aggregation-pipeline/
 
 ### Group
 
@@ -176,13 +204,11 @@ To illustrate the usage of a pipeline, consider the following three stages
 
 - filter the data
 - group by and summerize
-- arrange data
 
 ```{r}
 m$aggregate('[
   {"$match": {"bedrooms": {"$ne": null, "$ne": 0}}},
-  {"$group": { "_id": "$bedrooms", "price": { "$avg": "$price" }}},
-  {"$sort": { "_id": 1}}
+  {"$group": { "_id": "$bedrooms", "avg_price": { "$avg": "$price" }}}
 ]')
 ```
 
@@ -190,8 +216,8 @@ User the `$project` stage to rename `_id`.
 ```{r}
 m$aggregate('[
   {"$match": {"bedrooms": {"$ne": null, "$ne": 0}}},
-  {"$group": { "_id": "$bedrooms", "price": { "$avg": "$price" }}},
-  {"$project": { "_id": false, "bedrooms": "$_id", "price": true }},
+  {"$group": { "_id": "$bedrooms", "avg_price": { "$avg": "$price" }}},
+  {"$project": { "_id": false, "bedrooms": "$_id", "avg_price": true }},
   {"$sort": {"bedrooms": 1}}
 ]')
 ```
@@ -202,12 +228,12 @@ m$aggregate('[
   {"$match": {"bedrooms": {"$ne": null, "$ne": 0}}},
   {"$group": {
     "_id": {"property_type": "$property_type", "bedrooms": "$bedrooms"},
-    "price": { "$sum": "$price" }}},
+    "avg_price": { "$avg": "$price" }}},
   {"$project": {
     "_id": false,
     "property_type": "$_id.property_type",
     "bedrooms": "$_id.bedrooms",
-    "price": true
+    "avg_price": true
   }},
   {"$sort": {"property_type": 1, "bedrooms": 1}}
 ]')
@@ -219,6 +245,8 @@ Compute the average price per room grouped by property_type
 
 See: https://docs.mongodb.com/manual/reference/operator/aggregation/
 
+Remark: our mongo server is 3.x.
+
 ```{r}
 m$aggregate('[
   {"$match": {"bedrooms": {"$ne": null, "$ne": 0}}},
@@ -229,13 +257,13 @@ m$aggregate('[
   }},
   {"$group": {
     "_id": "$property_type",
-    "ave_bedrooms": { "$avg": "$bedrooms" },
+    "avg_bedrooms": { "$avg": "$bedrooms" },
     "price_per_room": { "$avg": "$price_per_room" }}
   },
   {"$project": {
     "_id": false,
     "property_type": "$_id",
-    "ave_bedrooms": true,
+    "avg_bedrooms": true,
     "price_per_room": true
   }},
   {"$sort": {"property_type": 1}}
@@ -244,8 +272,21 @@ m$aggregate('[
 
 ### Unwind an array
 
-`$Unwind` has a similar effect as `tidyverse`'s `unnest_longer` or `hoist`.
+`$unwind` has a similar effect as `tidyverse`'s `unnest_longer`.
 
+```{r}
+df <- tibble(
+  id = c("a", "b"),
+  v = list(1:3, 5:6),
+  w = c("apple", "banana")
+)
+```
+```{r}
+df %>% unnest_longer(v)
+```
+
+
+To query all the reviews of "Ribeira Charming Duplex".
 ```{r}
 m$aggregate('[
   {"$match": {"name": "Ribeira Charming Duplex"}},
@@ -262,3 +303,19 @@ m$aggregate('[
   }}
 ]')
 ```
+
+### Iteration
+
+```{r}
+it <- m$aggregate('[
+  {"$match": {"bedrooms": {"$ne": null, "$ne": 0}}},
+  {"$group": { "_id": "$bedrooms", "avg_price": { "$avg": "$price" }}},
+  {"$project": { "_id": false, "bedrooms": "$_id", "avg_price": true }},
+  {"$sort": {"bedrooms": 1}}
+]', iterate = TRUE)
+```
+
+```{r}
+it$batch(size = 2)
+```
+
