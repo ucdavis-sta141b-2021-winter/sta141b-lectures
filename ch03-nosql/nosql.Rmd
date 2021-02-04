@@ -170,52 +170,14 @@ it$json()
 
 The aggregation pipeline is a framework for data aggregation modeled on the concept of data processing pipelines.
 
-In the following code, there are three stages
+### Group
+
+To illustrate the usage of a pipeline, consider the following three stages
 
 - filter the data
 - group by and summerize
 - arrange data
 
-```{json eval = FALSE, include = FALSE}
-[
-  {
-    "$match": {
-      "$and": [
-        {"bedrooms": {"$ne": null}}, 
-        {"bedrooms": {"$ne": 0}}
-      ]
-    }
-  },
-  {
-    "$group": { 
-      "_id": "$bedrooms", 
-      "price": { "$avg": "$price" }}
-  },
-  {"$sort": { "_id": 1}}
-]
-```
-
-
-```{r}
-m$aggregate('[
-  {
-    "$match": {
-      "$and": [
-        {"bedrooms": {"$ne": null}}, 
-        {"bedrooms": {"$ne": 0}}
-      ]
-    }
-  },
-  {
-    "$group": { 
-      "_id": "$bedrooms", 
-      "price": { "$avg": "$price" }}
-  },
-  {"$sort": { "_id": 1}}
-]')
-```
-
-Another way to specify the same query
 ```{r}
 m$aggregate('[
   {"$match": {"bedrooms": {"$ne": null, "$ne": 0}}},
@@ -223,32 +185,13 @@ m$aggregate('[
   {"$sort": { "_id": 1}}
 ]')
 ```
-
-
-```{json, eval = FALSE, include = FALSE}
-[
-  {"$match": {"bedrooms": {"$ne": null, "$ne": 0}}},
-  {"$group": { "_id": "$bedrooms", "price": { "$avg": "$price" }}},
-  {"$project": {
-    "_id": false,
-    "bedrooms": "$_id",
-    "price": true
-  }},
-  {"$sort": {"bedrooms": 1}}
-]
-```
-
 
 User the `$project` stage to rename `_id`.
 ```{r}
 m$aggregate('[
   {"$match": {"bedrooms": {"$ne": null, "$ne": 0}}},
   {"$group": { "_id": "$bedrooms", "price": { "$avg": "$price" }}},
-  {"$project": {
-    "_id": false,
-    "bedrooms": "$_id",
-    "price": true
-  }},
+  {"$project": { "_id": false, "bedrooms": "$_id", "price": true }},
   {"$sort": {"bedrooms": 1}}
 ]')
 ```
@@ -270,7 +213,11 @@ m$aggregate('[
 ]')
 ```
 
+### Aggregation Pipeline Operators
+
 Compute the average price per room grouped by property_type
+
+See: https://docs.mongodb.com/manual/reference/operator/aggregation/
 
 ```{r}
 m$aggregate('[
@@ -295,3 +242,23 @@ m$aggregate('[
 ]')
 ```
 
+### Unwind an array
+
+`$Unwind` has a similar effect as `tidyverse`'s `unnest_longer` or `hoist`.
+
+```{r}
+m$aggregate('[
+  {"$match": {"name": "Ribeira Charming Duplex"}},
+  {"$project": {
+    "name": true,
+    "reviews": true
+  }},
+  {"$unwind": "$reviews"},
+  {"$project": {
+    "_id": false,
+    "name": true,
+    "reviewer_name": "$reviews.reviewer_name",
+    "comments": "$reviews.comments"
+  }}
+]')
+```
