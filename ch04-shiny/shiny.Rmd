@@ -8,7 +8,8 @@ output:
 
 Shiny is an R package that makes it easy to build interactive web apps straight from R.
 
-You can host 
+You can host
+
 - standalone apps on a webpage
 - embed them in R Markdown documents
 - build dashboards
@@ -24,7 +25,7 @@ There are multiple way to host a shiny app.
 - Upload your app to https://www.shinyapps.io/
   - Each month you have 25 free active hours
   - Maximum 5 apps for free
-- Google Cloud Run
+- Google Cloud Run: https://code.markedmondson.me/shiny-cloudrun/
 
 
 ## First Shiny App
@@ -32,7 +33,7 @@ There are multiple way to host a shiny app.
 There are couple ways to create an shiny app (we are going to focus on RStudio).
 
 - File -> New File -> Shiny Web App
-  - Single file (recommanded)
+  - Single file (recommended)
   - Multiple files (essentially the same as single file, but two files)
 - File -> New File -> R Markdown -> Shiny
 - File -> New File -> R Markdown -> From Template -> Flex Dashboard (if `flexdashboard` was installed.)
@@ -47,7 +48,7 @@ ui <- fluidPage(
 
 
 server <- function(input, output) {
-  # controls the interaction, modifly output based on user input
+  # controls the interaction, modify output based on user input
 }
 
 # run the application 
