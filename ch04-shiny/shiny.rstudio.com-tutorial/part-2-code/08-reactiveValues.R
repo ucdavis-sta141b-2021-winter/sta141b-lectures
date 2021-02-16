@@ -10,13 +10,22 @@ ui <- fluidPage(
 
 server <- function(input, output) {
 
-  rv <- reactiveValues(data = rnorm(100))
+  rv <- reactiveValues(data = rnorm(100), x = 1, y = 2, z = 3)
 
-  observeEvent(input$norm, { rv$data <- rnorm(100) })
-  observeEvent(input$unif, { rv$data <- runif(100) })
+  observeEvent(input$norm, {
+    rv$data <- rnorm(100) + rv$data2
+    rv$x <- rv$y + 4
+  })
+  observeEvent(input$unif, {
+    rv$data <- runif(100)
+  })
 
-  output$hist <- renderPlot({ 
-    hist(rv$data) 
+  observe({
+    print(rv$data)
+  })
+
+  output$hist <- renderPlot({
+    hist(rv$data)
   })
 }
 

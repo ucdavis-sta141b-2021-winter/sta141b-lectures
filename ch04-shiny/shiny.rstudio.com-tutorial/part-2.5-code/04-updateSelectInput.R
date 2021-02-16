@@ -3,7 +3,7 @@ library(shiny)
 ui <- fluidPage(
   p("The checkbox group controls the select input"),
   checkboxGroupInput("inCheckboxGroup", "Input checkbox", c("Item A", "Item B", "Item C")),
-  selectInput("inSelect", "Select input", c("Item A", "Item B", "Item C"))
+  selectInput("inSelect", "Select input", NULL)
 )
 
 
@@ -17,11 +17,16 @@ server <- function(input, output, session) {
     if (is.null(x))
       x <- character(0)
 
+    # keeps the original value of the selectInput
+    originalSelectValue <- isolate(input$inSelect)
+    if (is.null(originalSelectValue) || !(originalSelectValue %in% x)) {
+      originalSelectValue <- head(x, 1)
+    }
     # Can also set the label and select items
     updateSelectInput(session, "inSelect",
       label = paste("Select input label", length(x)),
       choices = x,
-      selected = tail(x, 1)
+      selected = originalSelectValue
     )
   })
 }

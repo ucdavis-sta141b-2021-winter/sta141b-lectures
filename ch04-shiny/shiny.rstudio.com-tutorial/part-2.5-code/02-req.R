@@ -13,7 +13,7 @@ server <- function(input, output) {
     ## but better: require that input$data is valid and leave the last
     ## valid table up
     req(input$data != "", cancelOutput = TRUE)
-
+    #
     req(exists(input$data, "package:datasets", inherits = FALSE),
         cancelOutput = TRUE)
 

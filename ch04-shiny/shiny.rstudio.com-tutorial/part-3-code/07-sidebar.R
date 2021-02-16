@@ -5,10 +5,10 @@ library(shiny)
 ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
-      sliderInput(inputId = "num", 
-        label = "Choose a number", 
+      sliderInput(inputId = "num",
+        label = "Choose a number",
         value = 25, min = 1, max = 100),
-      textInput(inputId = "title", 
+      textInput(inputId = "title",
         label = "Write a title",
         value = "Histogram of Random Normal Values")
     ),
