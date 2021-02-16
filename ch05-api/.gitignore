@@ -1,2 +1,3 @@
 .httr-oauth
 .Renviron
+api_cache/
