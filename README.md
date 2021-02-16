@@ -39,6 +39,7 @@
 | 02-02 | [json](ch03-nosql/json.Rmd)   | [json](https://ucdavis-sta141b-2021-winter.github.io/sta141b-lectures/ch03-nosql/json.html)   |
 |       | [nosql](ch03-nosql/nosql.Rmd) | [nosql](https://ucdavis-sta141b-2021-winter.github.io/sta141b-lectures/ch03-nosql/nosql.html) |
 | 02-09 | [shiny](ch04-shiny/shiny.Rmd) | [shiny](https://ucdavis-sta141b-2021-winter.github.io/sta141b-lectures/ch04-shiny/shiny.html) |
+| 02-16 | [api](ch05-api/api.Rmd)       | [api](https://ucdavis-sta141b-2021-winter.github.io/sta141b-lectures/ch05-api/api.html)       |
 
 ## Links
 
