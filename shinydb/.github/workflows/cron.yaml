@@ -1,0 +1,25 @@
+name: CRON
+
+on:
+  schedule:
+    # see https://crontab.guru/
+    - cron: '0 0 * * *'  # run every day at 12:00am
+    # - cron: '*/15 * * * *'  # run every 15 minutes
+
+jobs:
+  run-cron-job:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: r-lib/actions/setup-r@v1
+      - name: Install dependencies
+        run: |
+          install.packages('renv')
+          dependencies <- renv::dependencies(quiet = TRUE)
+          packages <- dependencies[endsWith(dependencies[, 'Source'], "/cron.R"), 'Package']
+          install.packages(setdiff(packages, .packages(all.available = TRUE)))
+        shell: Rscript {0}
+      - name: Run job
+        run: Rscript cron.R
+        env:
+          DATABASEPW: ${{secrets.DATABASEPW}}
