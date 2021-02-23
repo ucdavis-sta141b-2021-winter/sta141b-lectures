@@ -12,7 +12,7 @@ library(jsonlite)
 library(lubridate)
 ```
 
-# API
+# Web API (Application Programming Interface)
 
 This section lists some examples of public HTTP APIs that publish data in JSON format. These are great to get a sense of the complex structures that are encountered in real world JSON data.
 
@@ -27,6 +27,7 @@ A single public API that shows location, status and current availability for all
 
 ```{r}
 citibike <- fromJSON("https://gbfs.citibikenyc.com/gbfs/en/station_status.json")
+citibike$data$stations
 with_tz(as_datetime(citibike$last_updated), "US/Pacific")
 ```
 
@@ -38,12 +39,20 @@ citibike %>% glimpse()
 
 ```{r}
 stations <- citibike$data$stations
-stations %>%
-  filter(num_bikes_available > 0)
+good_stations <- stations %>%
+  filter(num_bikes_available > 0) %>% 
+  select(station_id, num_bikes_available)
 ```
 
 ```{r}
-nrow(stations)
+nrow(good_stations)
+```
+
+```{r}
+station_info <- fromJSON("https://gbfs.citibikenyc.com/gbfs/en/station_information.json")
+station_info$data$stations %>% 
+  inner_join(good_stations, by = "station_id") %>% 
+  select(station_id, name, num_bikes_available)
 ```
 
 
@@ -75,7 +84,6 @@ It is a very simple API which suffles cards.
 ```{r, out.width = "20%"}
 # get a deck
 deck <- fromJSON("https://deckofcardsapi.com/api/deck/new/shuffle/?deck_count=1")
-deck_id <- deck$deck_id
 ```
 
 
@@ -94,8 +102,17 @@ cards <- fromJSON(
 knitr::include_graphics(cards$cards$images.svg)
 ```
 
+```{r}
+# reshuffle deck
+fromJSON(
+  str_glue("https://deckofcardsapi.com/api/deck/{deck_id}/shuffle/",
+    deck_id = deck$deck_id
+  )
+)
+```
+
 The parameters after `?` are called GET parameters. A more formal way to handle GET parameters is to use the
-`httr` package. 
+`httr` package.
 
 ```{r}
 library(httr)
@@ -103,10 +120,10 @@ library(httr)
 
 ```{r}
 endpoint <- str_glue("https://deckofcardsapi.com/api/deck/{deck_id}/draw/", deck_id = deck$deck_id)
-r <- GET(endpoint, query = list(count = 3))
+r <- GET(endpoint, query = list(count = 2))
 stop_for_status(r)
-json <- content(r, as = "text", encoding = "UTF-8")
-cards <- fromJSON(json, flatten = TRUE)
+
+cards <- fromJSON(content(r, as = "text", encoding = "UTF-8"), flatten = TRUE)
 cards
 ```
 
@@ -142,11 +159,18 @@ fromJSON(json)
 There are multiple ways to protect your API key.
 
 - Make use of environment variables. Environment variables are stored in `.Renviron`.
-You could put this file in various places.
+In the file `.Renviron`, put
+```
+GEODATA_KEY="YOUR API KEY"
+```
+
+- You could put this file in various places.
 
   - Project home directory
   
     - `usethis::edit_r_environ("project")`
+    
+    - The file `.Renviron` is loaded automatically every time when R restarts.
     
   - Under the same directory as the Rscript
 
@@ -156,12 +180,6 @@ You could put this file in various places.
 ```{r}
 readRenviron(".Renviron")
 ```
-
-In the file `.Renviron`, put
-```
-GEODATA_KEY="YOUR API KEY"
-```
-
 
 ```{r}
 # you might need to change your working directory and restart R session to make it work
@@ -174,8 +192,7 @@ r <- GET(
   )
 )
 stop_for_status(r)
-json <- content(r, as = "text")
-fromJSON(json)
+fromJSON(content(r, as = "text"))
 ```
 
 - The other approach is to make use of the package `keyring`. (PS: this method doesn't work for shiny app)
@@ -202,6 +219,11 @@ fromJSON(json)
 ```
 
 
+```{r, eval = FALSE}
+keyring::key_delete("GEODATA_KEY")
+```
+
+
 ## The Guardian News https://open-platform.theguardian.com/
 
 ```{r}
@@ -209,14 +231,15 @@ r <- GET(
   "https://content.guardianapis.com/search",
   query = list(
     `api-key` = Sys.getenv("GUARDIAN_KEY"),
-    q = "coronavirus"
+    q = 'coronavirus',
+    `page-size` = 10
   )
 )
 stop_for_status(r)
-json <- content(r, as = "text", encoding = "UTF-8")
-result <- fromJSON(json)
+result <- fromJSON(content(r, as = "text", encoding = "UTF-8"))
 result$response$results
 ```
+
 
 Only 10 results?
 ```{r}
@@ -230,6 +253,7 @@ r <- GET(
   query = list(
     `api-key` = Sys.getenv("GUARDIAN_KEY"),
     q = "coronavirus",
+    `page-size` = 10,
     page = 2
   )
 )
@@ -255,8 +279,10 @@ r <- GET(
 )
 stop_for_status(r)
 json <- content(r, as = "text", encoding = "UTF-8")
+```
 
 
+```{r}
 fromJSON(json, flatten = TRUE)$queryresult$pods %>%
   hoist(subpods, text = "plaintext") %>%
   select(title, text) %>%
@@ -290,12 +316,11 @@ fromJSON(json, flatten = TRUE)$results %>% pull(vicinity)
 
 ## GitHub API
 
-GitHub requries API token instead of an API key.
+GitHub requires API token instead of an API key.
 
 ```{r}
-username <- "randy3k"
 r <- GET(
-  str_glue("https://api.github.com/users/{username}/repos"),
+  str_glue("https://api.github.com/users/{username}/repos", username = "randy3k"),
   add_headers(Authorization = paste("token", Sys.getenv("GITHUB_PAT")))
 )
 stop_for_status(r)
@@ -308,10 +333,23 @@ Only 30 repos? How to go to next page?
 ```{r}
 r$headers$link
 ```
+```{r}
+r2 <- GET("https://api.github.com/user/1690993/repos?page=2",
+         add_headers(Authorization = paste("token", Sys.getenv("GITHUB_PAT"))))
+stop_for_status(r2)
+json <- content(r2, as = "text")
+fromJSON(json)
+```
+
+```{r}
+r2$headers$link
+```
+
+
 
 ## Yelp
 
-Yelp requries Bearer token directory instead of an API key.
+Yelp requires Bearer token directory instead of an API key.
 
 First, you will need to register an app on yelp: https://www.yelp.com/developers
 
