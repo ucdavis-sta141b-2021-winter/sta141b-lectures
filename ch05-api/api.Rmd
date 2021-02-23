@@ -369,7 +369,7 @@ fromJSON(json, flatten = TRUE)$businesses %>% select(name)
 
 # OAuth
 
-OAuth is a technique to allow developers to access the API on behalf on themself or other users.
+OAuth is a technique to allow developers to access the API on behalf on themselves or other users.
 
 There are two versions of OAuth, 1.0 and 2.0. You should not think that 2.0 is better than 1.0. They are simply different implementations.
 
@@ -483,7 +483,7 @@ get_trends(woeid) %>% arrange(tweet_volume) %>%  select(name)
 ```
 
 
-## Google sheet API (three legged)
+## Google sheets API (three legged)
 
 An API key of google cannot be used to access personal data on google, we will perform a three-legged OAuth dance.
 
