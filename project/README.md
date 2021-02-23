@@ -2,8 +2,6 @@
 
 In this final project, you are going to write a shiny application to demonstrate the techniques that you learn in this course. You will need to obtain some data from the web.
 
-If you are doing web scrapping, stick with static web scrapping. Dynamic web scrapping is not suitable for Shiny application.
-
 Here is a list of public APIs for your reference: https://github.com/public-apis/public-apis
 You are not limited to the APIs listed there, however, you are advised to focus on APIs with no authentication or using API keys.
 
