@@ -74,11 +74,11 @@
 
 ## Grading
 
-| Category                                                                                 | Grade Percentage |
-| ---------------------------------------------------------------------------------------- | ---------------- |
-| Assignments                                                                              | 65%              |
-| [Final Project](https://github.com/ucdavis-sta141b-2021-winter/sta141b-lectures/project) | 25%              |
-| Participation                                                                            | 10%              |
+| Category                                                                                             | Grade Percentage |
+| ---------------------------------------------------------------------------------------------------- | ---------------- |
+| Assignments                                                                                          | 65%              |
+| [Final Project](https://github.com/ucdavis-sta141b-2021-winter/sta141b-lectures/tree/master/project) | 25%              |
+| Participation                                                                                        | 10%              |
 
   - There will be around 6 assignments and they are assigned via GitHub
     classroom.
