@@ -31,15 +31,16 @@
 
 ## Material
 
-| Date  | Note                          | HTML                                                                                          |
-| ----- | ----------------------------- | --------------------------------------------------------------------------------------------- |
-| 01-05 | Introduction                  | [introduction](README.md)                                                                     |
-| 01-07 | [dplyr](ch01-dplyr/dplyr.Rmd) | [dplyr](https://ucdavis-sta141b-2021-winter.github.io/sta141b-lectures/ch01-dplyr/dplyr.html) |
-| 01-19 | [sql](ch02-sql/sql.Rmd)       | [sql](https://ucdavis-sta141b-2021-winter.github.io/sta141b-lectures/ch02-sql/sql.html)       |
-| 02-02 | [json](ch03-nosql/json.Rmd)   | [json](https://ucdavis-sta141b-2021-winter.github.io/sta141b-lectures/ch03-nosql/json.html)   |
-|       | [nosql](ch03-nosql/nosql.Rmd) | [nosql](https://ucdavis-sta141b-2021-winter.github.io/sta141b-lectures/ch03-nosql/nosql.html) |
-| 02-09 | [shiny](ch04-shiny/shiny.Rmd) | [shiny](https://ucdavis-sta141b-2021-winter.github.io/sta141b-lectures/ch04-shiny/shiny.html) |
-| 02-16 | [api](ch05-api/api.Rmd)       | [api](https://ucdavis-sta141b-2021-winter.github.io/sta141b-lectures/ch05-api/api.html)       |
+| Date  | Note                                            | HTML                                                                                                            |
+| ----- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| 01-05 | Introduction                                    | [introduction](README.md)                                                                                       |
+| 01-07 | [dplyr](ch01-dplyr/dplyr.Rmd)                   | [dplyr](https://ucdavis-sta141b-2021-winter.github.io/sta141b-lectures/ch01-dplyr/dplyr.html)                   |
+| 01-19 | [sql](ch02-sql/sql.Rmd)                         | [sql](https://ucdavis-sta141b-2021-winter.github.io/sta141b-lectures/ch02-sql/sql.html)                         |
+| 02-02 | [json](ch03-nosql/json.Rmd)                     | [json](https://ucdavis-sta141b-2021-winter.github.io/sta141b-lectures/ch03-nosql/json.html)                     |
+|       | [nosql](ch03-nosql/nosql.Rmd)                   | [nosql](https://ucdavis-sta141b-2021-winter.github.io/sta141b-lectures/ch03-nosql/nosql.html)                   |
+| 02-09 | [shiny](ch04-shiny/shiny.Rmd)                   | [shiny](https://ucdavis-sta141b-2021-winter.github.io/sta141b-lectures/ch04-shiny/shiny.html)                   |
+| 02-16 | [api](ch05-api/api.Rmd)                         | [api](https://ucdavis-sta141b-2021-winter.github.io/sta141b-lectures/ch05-api/api.html)                         |
+| 02-25 | [webscraping](ch06-webscraping/webscraping.Rmd) | [webscraping](https://ucdavis-sta141b-2021-winter.github.io/sta141b-lectures/ch06-webscraping/webscraping.html) |
 
 ## Links
 
