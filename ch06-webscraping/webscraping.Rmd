@@ -1,0 +1,281 @@
+---
+title: "Web Scraping"
+output: 
+  html_document: 
+    toc: yes
+---
+
+
+```{r}
+library(tidyverse)
+library(rvest)
+```
+
+
+# Web scraping
+
+Web scraping is a technique of extracting useful information from webpages. But why do you need it? 
+Not all companies provide an API, some times, you will need to scrape information directly from their websites.
+
+
+# HTML and XML
+
+Here is an example of a simple HTML page:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+<title>Page Title</title>
+</head>
+<body>
+<h1>This is a Heading</h1>
+<p>This is a paragraph.</p>
+</body>
+</html>
+```
+
+Of course, there are a lot of different tags. Go to https://www.w3schools.com/html/ to see some html basics.
+Nevertheless, all these tags are predefined so your browser knows what each tag means.
+
+(We only need to only a bit HTML in order to do web scrapping)
+
+
+## Look at web page source code
+
+It is important to identify the thing that you want to scrape in the webpage. The best way to do it is to use the inspect function in the Chrome browser.
+
+
+## CSS selector
+
+CSS selector is the most common way to locate an object in a website. 
+
+- `tag`: the name of the tag, for example `td` and `a` tags
+- `.class`: class of an object
+- `#id`: id of an object
+
+
+## imdb example
+
+Suppose we want to get the list of most top rated movies from https://www.imdb.com/chart/top/?ref_=nv_mv_250
+
+We see that all movies names are under the `<td>/<a>` nodes. The `<td>` nodes have class name `titleColumn`.
+
+```{r}
+html <- read_html("https://www.imdb.com/chart/top/?ref_=nv_mv_250")
+```
+
+
+```{r}
+# it finds all the <td> nodes, but we only need the node with class `titleColumn`
+td_nodes <- html %>% html_nodes("td")
+# it finds all the <td> nodes with class titleColumn
+title_columns <- html %>% html_nodes("td.titleColumn")
+# it finds all the <a> nodes within <td> nodes with class titleColumn
+a_nodes <- title_columns %>% html_node("a")
+# html_text to get the values inside the <a> </a> tag
+movie_names <- a_nodes %>% html_text()
+head(movie_names)
+```
+
+Put everything together
+```{r}
+movie_names <- html %>%
+  html_nodes("td.titleColumn") %>% 
+  html_node("a") %>%
+  html_text()
+```
+
+
+Now, we also want to capture the ratings.
+
+```{r}
+imdb_ratings <-  html %>%
+  html_nodes("td.ratingColumn.imdbRating") %>%
+  html_node("strong") %>%
+  html_text()
+```
+
+```{r}
+tibble(title = movie_names, rating = imdb_ratings)
+```
+
+How if you also want to get the years? There is also a cute function `html_table`.
+
+```{r}
+html %>% html_node("table.chart.full-width") %>%
+  html_table() %>% 
+  as_tibble(.name_repair = "unique") %>%
+  select(rank_and_title = `Rank & Title`, rating = `IMDb Rating`) %>%
+  separate(rank_and_title, c("rank", "title", "year"), sep = "\n")
+```
+
+
+
+Now, we want to url link to the movie "The Shawshank Redemption".
+
+```{r}
+shawshank_url <- html %>%
+  html_nodes("td.titleColumn") %>%
+  html_node("a") %>%
+  keep(html_text(.) == "The Shawshank Redemption") %>%
+  html_attr("href")
+```
+
+Alternatively, we could the CSS pseudo class `contains()`
+
+```{r}
+shawshank_url <- html %>%
+  html_node('td.titleColumn a:contains("The Shawshank Redemption")') %>%
+  html_attr("href")
+```
+
+But it is not the complete url, we need to base url.
+```{r}
+shawshank_full_url <- paste0("https://www.imdb.com/", shawshank_url)
+```
+
+Then we could further scrape things from `shawshank_full_url`.
+
+
+
+## Stackoverflow example
+
+Besides using node class, you could also search a node by its `id`.
+
+Here we are first extracting the `div` node with `id="questions"`.
+
+```{r}
+read_html("https://stackoverflow.com/questions/tagged/r") %>%
+  html_node("div#questions") %>%
+  html_nodes("div.summary") %>%
+  html_nodes("h3") %>%
+  html_nodes("a") %>%
+  html_text()
+```
+
+
+# Scraping dynamic webpages
+
+`rvest` is only able to scrape static web pages. If you want to scrape dynamic web pages, you will need to control a browser programatically.
+
+PS: Please note that dynamic scraping is not suitable to be used in shiny application.
+
+
+## UC Davis class search
+
+
+```{r}
+library(RSelenium)
+requireNamespace("wdman")
+requireNamespace("httpuv")
+```
+
+
+```{r}
+port <- httpuv::randomPort()
+# find a version of chromedriver that is compatible with your chrome
+# binman::list_versions("chromedriver")
+server <- wdman::chrome(port = port, version = "87.0.4280.87", verbose = FALSE)
+rd <- remoteDriver(port = port)
+```
+
+
+```{r}
+rd$open(silent = TRUE)
+# check if there is any error messages
+stopifnot(is.null(rd$sessionInfo$message))
+
+rd$navigate("https://registrar-apps.ucdavis.edu/courses/search/index.cfm")
+```
+
+```{r}
+rd$findElement("css", "#course_number")$clickElement()
+rd$sendKeysToActiveElement(list("STA"))
+rd$findElement(
+    "css", 
+    '#home_tablez_bz input[name="search"]'
+  )$clickElement()
+```
+
+
+```{r}
+retry::retry({
+  rd$getPageSource()[[1]] %>% 
+    read_html() %>% 
+    html_node("div#courseResultsDiv table") %>% 
+    html_table() %>% {
+      df <- slice(., -(1:4))
+      names(df) <- slice(., 4)
+      df
+    } %>% 
+    separate("CRN Time/Days", c("CRN", "Time/Days"), "\n\\s+\t")
+  },
+  when = "xml_missing",
+  timeout = 5
+)
+```
+
+```{r}
+# close the browser finally
+server$stop()
+```
+
+## NBA site
+
+PS: actually nba.com has a undocumented API, see https://github.com/seemethere/nba_py/wiki/stats.nba.com-Endpoint-Documentation
+
+
+```{r}
+port <- httpuv::randomPort()
+server <- wdman::chrome(port = port, version = "87.0.4280.87", verbose = FALSE)
+rd <- remoteDriver(port = port)
+```
+
+```{r}
+rd$open(silent = TRUE)
+rd$navigate("https://stats.nba.com/leaders/?SeasonType=Regular%20Season")
+```
+
+```{r}
+retry::retry({
+  rd$getPageSource()[[1]] %>%
+    read_html() %>%
+    html_node("div.nba-stat-table__overflow table") %>%
+    html_table()
+  },
+  when = "xml_missing",
+  timeout = 5
+)  
+```
+
+loop over the table by clicking the next button
+```{r}
+leader <- NULL
+for (i in 1:6) {
+  leader <- bind_rows(
+    leader,
+    rd$getPageSource()[[1]] %>%
+      read_html() %>%
+      html_node("div.nba-stat-table__overflow table") %>%
+      html_table()
+  )
+  nextbutton <- rd$findElement("css", "a.stats-table-pagination__next")
+  nextbutton$clickElement()
+}
+```
+
+```{r}
+leader
+```
+
+```{r}
+# close the browser finally
+server$stop()
+```
+
+## Advanced topics
+
+- Headless browser
+- XPaths
+
