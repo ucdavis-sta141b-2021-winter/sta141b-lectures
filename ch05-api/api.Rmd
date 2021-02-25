@@ -135,7 +135,7 @@ knitr::include_graphics(cards$cards$images.svg)
 
 ## GeoDataSource https://www.geodatasource.com/
 
-In this secton, we are going to show you how we use an API which requires an API key. API key allows you to use the services the API provides on behalf of yourself.
+In this section, we are going to show you how we use an API which requires an API key. API key allows you to use the services the API provides on behalf of yourself.
 
 ```{r, eval = FALSE}
 r <- GET(
@@ -369,6 +369,8 @@ fromJSON(json, flatten = TRUE)$businesses %>% select(name)
 
 # OAuth
 
+# NOTE: this kind of APIs is not recomended for the final project (as it is going to be a shiny application).
+
 OAuth is a technique to allow developers to access the API on behalf on themselves or other users.
 
 There are two versions of OAuth, 1.0 and 2.0. You should not think that 2.0 is better than 1.0. They are simply different implementations.
@@ -394,11 +396,13 @@ To put is simple, there are three cases
   4. Bob uses to authorization code to generate an access token from the server
   5. Bob uses the access token to access emails for Alice and displays them in the app
 
+```{r}
+library(httr)
+```
 
 ## Noun Project https://thenounproject.com/ (one legged)
 
 The Noun Project uses one-legged OAuth protocol to authenticate users.
-
 
 ```{r, out.width = "5%"}
 noun_app <- oauth_app(
@@ -450,7 +454,6 @@ twitter_token <- oauth2.0_token(
 ```
 
 
-
 ```{r}
 # Where On Earth IDentifier
 get_woeid <- function(city, country) {
@@ -462,7 +465,7 @@ get_woeid <- function(city, country) {
   stop_for_status(r)
   json <- content(r, as = "text")
   fromJSON(json) %>%
-    filter(name == {{ city }}, country == {{ country }}) %>%
+    filter(name == !!city , country == !!country ) %>%
     pull(woeid)
 }
 
