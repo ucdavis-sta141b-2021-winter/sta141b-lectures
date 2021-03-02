@@ -1,0 +1,546 @@
+---
+title: "Regex"
+output: 
+  html_document: 
+    toc: yes
+---
+
+```{r}
+library(tidyverse)
+```
+
+# Regular Expression
+
+## Introduction
+
+A regular expression, `regex` or `regexp` is a sequence of characters that define a search pattern. 
+
+There exists many versions of regular expressions. `stringr` of tidyverse follows the [ICU standard](http://userguide.icu-project.org/strings/regexp) while base R follows the [PCRE](https://www.pcre.org/) standard. See [Comparison of regular-expression engines](https://en.wikipedia.org/wiki/Comparison_of_regular-expression_engines)
+
+
+We again prefer the tidyverse packages over base functions. 
+
+
+## Basic concepts
+
+We will use `https://regex101.com/` to illustrate the following. (Choose the Python engine to best mimic ICU standard)
+
+- Boolean "or" - `gray|grey` can match `gray` or `grey`
+
+- Grouping - Parentheses are used to define the scope and precedence of the operators - `gr(a|e)y` can match `gray` and `grey`.
+
+- A quantifier after a token, character or group specifies how often that a preceding element is allowed to occur.
+
+  |quantifier||
+  |----|----|
+  |?   | zero or one occurrences |
+  |*   |zero or more occurrences|
+  |+   | one or more occurrences|
+  |{n}  | exactly n occurrences|
+  |{n,}  |`n` or more times|
+  |{m, n}  |`m` or more times but not more than `n`|
+  
+  Examples:
+  - `colou?r` matches both "color" and "colour".
+  - `ab*c` matches "ac", "abc", "abbc", "abbbc", and so on
+  - `ab+c` matches "abc", "abbc", "abbbc", and so on, but not "ac"
+
+- Wildcard - The wildcard `.` matches any character except a new line.
+  
+  Examples:
+  - `a.c` matches "aac", "abc" and so on.
+
+- Anchors - `^` matches the beginning of a string (line if multiline mode) `$` matches the end of a string (line if multiline mode)
+  
+  Examples:
+  - `^abc` matches "abc" but not "cabc"
+  - `abc$` matches "abc" but not "abcd"
+
+- Bracket expression `[...]` matches a single character that is contained within the brackets
+  
+  Examples:
+    - `[abc]` matches "a", "b", or "c"
+    - `[abc123]` matches "a", "b", "c", "1", "2" or "3"
+    - `[a-z]` specifies a range which matches any lowercase letter
+    from "a" to "z".
+    - `[a-zA-Z0-9]` matches all alphanumerics
+    - `[\[\]]` matches `[` or `]`
+  
+- Bracket expression `[^...]` matches a single character that is not contained within the brackets
+    
+  Examples:
+    - `[^abc]` matches any character other than "a", "b", or "c"
+    - `[^\]]` matches any character which is not `]`.
+  
+- Special characters
+  
+  Honable mentions
+  | Pattern | matches|
+  |----|---|
+  |`\.`| `.`|
+  |`\!`| `!`|
+  |`\?`| `?`|
+  |`\\`| `\`|
+  |`\(`| `(`|
+  |`\{`| `{`|
+  |`\}`| `}`|
+  |`\[`| `[`|
+  |`\]`| `]`|
+  |`\n`| a new line|
+  |`\s`| a space or a tab|
+  |`\S`| not a space nor a tab|
+  |`\d`| a digit|
+  |`\D`| a non digit|
+  |`\w`| a word character (includes for example CJK chars)|
+  |`\W`| a non word character|
+  |`\b` | word boundaries|
+
+
+## Escaping characters
+
+
+In R, these two characters need to be specially treated in double quotes.
+
+  - `"\\"` means a single backslash
+  - `"\""` means a double quote
+
+
+Similarly, for single quotes
+  - `'\\'` means a single backslash
+  - `'\''` means a single quote
+
+
+For R 4.0 above,
+
+  - `r"(regex)"`
+  - `r'(regex)'`
+  - `R"(regex)"`
+  - `R'(regex)'`
+  - `r"--(regex)--"`
+  - `R"--(regex)--"`
+
+
+# Package `stringr` (tidyverse)
+
+## Manage Strings
+
+```{r}
+fruit <- c("apple", "banana", "pear", "pinapple")
+str_length(fruit)
+# add leading white spaces
+str_pad(fruit, 10)
+# remove white spaces
+str_trim(str_pad(fruit, 10))
+# ...
+str_trunc(fruit, 5)
+```
+
+
+## Detect Matches
+
+```{r}
+fruit <- c("apple", "banana", "pear", "pinapple")
+# contains a?
+str_detect(fruit, "a")
+# starts with a
+str_detect(fruit, "^a")
+str_starts(fruit, "a")
+# ends with a
+str_detect(fruit, "a$")
+str_ends(fruit, "a")
+# contains a, e, i, o or u
+str_detect(fruit, "[aeiou]")
+```
+
+```{r}
+# negate the result
+str_detect(fruit, "^p", negate = TRUE)
+```
+
+```{r}
+fruit <- c("apple", "banana", "pear", "pinapple")
+# count the number of matches
+str_count(fruit, "p")
+str_count(fruit, "p+")
+```
+
+```{r}
+# get locations
+str_locate(fruit, "[aeiou]+")
+str_locate_all(fruit, "[aeiou]+")
+```
+
+```{r}
+# The pattern variable can also be vectorized
+str_locate_all(fruit, c("a", "b", "p", "p"))
+```
+
+## Subset Strings
+
+```{r}
+fruit <- c("apple", "banana", "pear", "pinapple")
+# exact substring from start to end
+str_sub(fruit, 1, 3)
+str_sub(fruit, -3, -2)
+
+# only select the elements that match
+str_subset(fruit, "p{2,}")
+# indexes that have matches
+str_which(fruit, "b|r")
+```
+
+```{r}
+shopping_list <- c("apples x4", "bag of flour", "bag of sugar", "milk x2")
+
+# numbers
+str_extract(shopping_list, "\\d")
+# lower case chars
+str_extract(shopping_list, "[a-z]+")
+# lower case chars of length 1 to 4
+str_extract(shopping_list, "[a-z]{1,4}")
+# lower case chars of length 1 to 4 with word boundary
+str_extract(shopping_list, "\\b[a-z]{1,4}\\b")
+
+str_extract_all(shopping_list, "[a-z]+")
+str_extract_all(shopping_list, "[a-z]+", simplify = TRUE)
+```
+
+
+```{r}
+strings <- c(
+  " 219 733 8965",
+  "329-293-8753 ",
+  "banana", 
+  "239 923 8115 and 842 566 4692",
+  "Work: 579-499-7527",
+  "$1000",
+  "Home: 543.355.3679"
+)
+
+phone <- "([2-9][0-9]{2})[- .]([0-9]{3})[- .]([0-9]{4})"
+
+# only the matched pattern
+str_extract(strings, phone)
+str_extract_all(strings, phone)
+
+# with subgroups
+str_match(strings, phone)
+str_match_all(strings, phone)
+```
+
+
+## Mutate Strings
+
+```{r}
+fruit <- c("apple", "banana", "pear", "pinapple")
+str_sub(fruit, 1, 5) <- "APPLE"
+fruit
+```
+
+```{r}
+fruits <- c("one apple", "two pears", "three bananas")
+# change the first a, e, i, o and u to -
+str_replace(fruits, "[aeiou]", "-")
+# change all a, e, i, o and u to -
+str_replace_all(fruits, "[aeiou]", "-")
+# apply a function to the matches
+str_replace_all(fruits, "[aeiou]", toupper)
+# remove all a, e, i, o and u
+str_replace_all(fruits, "[aeiou]", "")
+str_remove_all(fruits, "[aeiou]")
+```
+
+
+References of the form `\0` (the full match), `\1`, `\2`, etc will be replaced with the contents of the respective matched group
+
+```{r}
+fruits <- c("one apple", "two pears", "three bananas three pineapples")
+str_match_all(fruits, "(\\w+) (\\w+)")
+str_replace_all(fruits, "(\\w+) (\\w+)", "\\1 \\1 \\2")
+```
+
+```{r}
+strings <- c(
+  "Work: 219 733 8965",
+  "Mobile: 579-499-7527",
+  "Home: 543.355.3679"
+)
+
+phone <- "([2-9][0-9]{2})[- .]([0-9]{3})[- .]([0-9]{4})"
+
+str_match_all(strings, phone)
+str_replace_all(strings, phone, "(\\1)-\\2-\\3")
+```
+
+
+```{r}
+# apply replacement mutliple times
+str_replace_all("foobar", c("foo" = "hello", "bar" = "world"))
+```
+
+Changes cases
+
+```{r}
+str_to_lower(c("one Apple", "tWo BANANAs", "THREE orangeS"))
+str_to_upper(c("one Apple", "tWo BANANAs", "THREE orangeS"))
+str_to_title(c("one Apple", "tWo BANANAs", "THREE orangeS"))
+```
+
+
+## Join and split
+
+```{r}
+str_c("apple", "pie")
+str_c(letters, LETTERS)
+```
+
+```{r}
+str_c(letters, collapse = "")
+str_c(letters, LETTERS, collapse = "")
+
+str_flatten(letters) # faster than str_c(letters, collapse = "") marginally
+```
+
+```{r}
+fruits <- c(
+  "apples and oranges and pears and bananas",
+  "pineapples and mangos and guavas"
+)
+
+str_split(fruits, " and ")
+str_split(fruits, " and ", simplify = TRUE)
+str_split(fruits, " and ", n = 2)
+str_split(fruits, " and ", n = 3, simplify = TRUE)
+# a shorthand for str_split(..., n, simplify = TRUE)
+str_split_fixed(fruits, " and ", n = 3)
+```
+
+
+## Glue String
+
+```{r}
+name <- c("John", "Peter")
+age <- c(23, 17)
+# get variables from globals
+str_glue("{name} is {age}")
+```
+
+```{r}
+# get variables from arguments
+str_glue("{name} is {age}", name = "Anna", age = 43)
+```
+
+```{r}
+mtcars %>%
+  group_by(cyl) %>%
+  summarize(m = mean(mpg)) %>%
+  str_glue_data("A {cyl}-cylinder car has an average mpg of {round(m, 2)}.")
+```
+
+## Order Strings
+
+```{r}
+names <- c("John", "Albert", "Peter", "Charles")
+str_order(names)
+str_sort(names)
+str_sort(names, decreasing = TRUE)
+```
+
+```{r}
+files <- c("file10", "file2", "file5", "file1")
+str_sort(files)
+# more natrual order
+str_sort(files, numeric = TRUE)
+str_order(files, numeric = TRUE)
+```
+
+
+
+## Pattern interpretation 
+
+
+Patterns in stringr functions are interpreted as regex in default, you could use `fixed` or `regex` to change the default behavior.
+
+```{r}
+strings <- c("abb", "a.b")
+
+str_detect(strings, "a.b")
+str_detect(strings, fixed("a.b"))
+str_detect(strings, fixed("A.B", ignore_case = TRUE))
+```
+
+```{r}
+str_match_all("abaa\na", "^a")
+str_match_all("abaa\na", regex("^a", multiline = TRUE))
+str_match_all("abaa\na", regex("^A", ignore_case = TRUE, multiline = TRUE))
+```
+
+## More advanced topics of regex (if time is permitted)
+
+I assume that you are now comfortable with the basic regex. Let's talk about some more advanced topics.
+
+
+- non-capturing groups
+
+  a capturing group could be created by using a pair of parentheses `(<regex>)` and a non-captureing group can be created by using `(?:<regex>)`.
+
+```{r}
+# with captureing groups
+str_match("12mb", "([0-9]+)([a-z]+)")
+# with non-capturing groups
+str_match(c("12mb", "12MB"), "(?:[0-9]+)(?:[a-z]+|[A-Z]+)")
+```
+
+- atomic groups
+
+  an atomic group prevents the regex engine from backtracking back into the group
+  
+```{r}
+strings <- c("abc", "abcc")
+str_extract(strings, "a(?>bc|b)c")
+```
+
+
+- lazy quantifier
+
+  |quantifier||
+  |----|----|
+  |??   | zero or one occurrence, lazy|
+  |*?   | zero or more occurrences, lazy|
+  |+?   | one or more occurrences, lazy|
+  |{n,}?  |`n` or more times, lazy|
+  |{m, n}?  |`m` or more times but not more than `n`, lazy|
+
+
+```{r}
+strings <- c("abc", "acb")
+# it is greedy
+str_extract(strings, "ab?c?")
+# it is lazy
+str_extract(strings, "ab??c?")
+```
+
+```{r}
+strings <- "acbcbbc"
+# it is greedy, longest match
+str_extract(strings, "a.*c")
+# it is lazy, shortest match
+str_extract(strings, "a.*?c")
+```
+
+```{r}
+strings <- "acbcbbc"
+# it is greedy, longest match
+str_extract(strings, "a.+c")
+# it is lazy, shortest match
+str_extract(strings, "a.+?c")
+```
+
+```{r}
+strings <- "acbcbbc"
+str_extract(strings, "a.{2,}c")
+str_extract(strings, "a.{2,}?c")
+```
+
+- Possessive quantifier (does not backtrack)
+
+  |quantifier||
+  |----|----|
+  |?+   | zero or one occurrence, posessive|
+  |*+   | zero or more occurrences, posessive| 
+  |++   | one or more occurrences, posessive| 
+
+
+```{r}
+strings <- c("apple", "pineapple", "pinepineapple")
+str_extract(strings, "(pine)?pineapple")
+str_extract(strings, "(pine)?+pineapple")
+
+str_extract(strings, "(pine)*pineapple")
+str_extract(strings, "(pine)*+pineapple")
+```
+
+- back reference
+
+  back reference is used to reference a previous matched group
+  `\1`, `\2`, `\3` etc..
+  
+```{r}
+strings <- c(":abc:", "?foo?", "*bar*")
+str_match(strings, "(.)[a-z]+\\1")
+```
+
+
+
+- look ahead
+  - positive look ahead
+
+```{r}
+# it matches only the second `t` because the second `t` is followed by `s`
+str_locate_all("streets", "t(?=s)")
+```
+  
+- negative look ahead
+
+```{r}
+# it matches only the first `t` because the second `t` is followed by `s`
+str_locate_all("streets", "t(?!s)")
+```
+
+- look behind
+
+  - positive look behind
+  
+```{r}
+# it matches only the first `t` because the second `t` follows `s`
+str_locate_all("streets", "(?<=s)t")
+```
+  
+  
+  - negative look behind  
+  
+```{r}
+# it matches only the second `t` because the first `t` follows `s`
+str_locate_all("streets", "(?<!s)t")
+```
+
+```{r}
+# it also works if the look behind pattern is a (bounded) regex
+# (base R functions do not support regex in look behind pattern)
+str_locate_all("twisty streets", "(?<![se]{1,100})t")
+```
+
+- recursion
+
+
+We try to find the highest level of paranthesse in `((((x))))`, `((x)((y))(z))` `(x) (y)`
+
+```{r}
+# what doesn't work
+strings <- c("((((x))))", "((x) ((y)) (z))", "(x) (y)")
+str_extract_all(strings, "\\([^(]*\\)")
+str_extract_all(strings, "\\([^(]*?\\)")
+# how about back reference the entire group? no, it doesnt work
+str_extract_all(strings, "(\\((?:\\1*|[^)]*?)+\\))")
+```
+
+`stringr`'s functions don't support recusions, we will need to use base R functions (which are difficult to use and slower). Luckily, there is `rematch2` which provides nice wrapping functions to base R functions (still, it is slower).
+
+```{r}
+library(rematch2)
+re_match_all(strings, "\\((?:(?0)*|[^)]*?)+\\)") %>%
+  pull(.match)
+```
+
+
+# Three games to learn regex
+
+- http://play.inginf.units.it
+- https://alf.nu/RegexGolf
+- https://regexcrossword.com/
+
+
+## Reference
+
+- Online regex tester https://regex101.com/
+- R for Data Science https://r4ds.had.co.nz/strings.html
