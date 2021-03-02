@@ -41,6 +41,7 @@
 | 02-09 | [shiny](ch04-shiny/shiny.Rmd)                   | [shiny](https://ucdavis-sta141b-2021-winter.github.io/sta141b-lectures/ch04-shiny/shiny.html)                   |
 | 02-16 | [api](ch05-api/api.Rmd)                         | [api](https://ucdavis-sta141b-2021-winter.github.io/sta141b-lectures/ch05-api/api.html)                         |
 | 02-25 | [webscraping](ch06-webscraping/webscraping.Rmd) | [webscraping](https://ucdavis-sta141b-2021-winter.github.io/sta141b-lectures/ch06-webscraping/webscraping.html) |
+| 03-02 | [regex](ch07-regex/regex.Rmd)                   | [regex](https://ucdavis-sta141b-2021-winter.github.io/sta141b-lectures/ch07-regex/regex.html)                   |
 
 ## Links
 
