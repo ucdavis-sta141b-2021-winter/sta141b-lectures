@@ -256,7 +256,7 @@ summary {
 <h2>CSS selector</h2>
 <p>CSS selector is the most common way to locate an object in a website.</p>
 <ul>
-<li><code>tag</code>: the name of the tag, for example <code>td</code> and <code>a</code> tags</li>
+<li><code>tag</code>: the name of the tag, for example <code>&lt;td&gt;</code> and <code>&lt;a&gt;</code> tags</li>
 <li><code>.class</code>: class of an object</li>
 <li><code>#id</code>: id of an object</li>
 </ul>
@@ -267,8 +267,8 @@ summary {
 <p>We see that all movies names are under the <code>&lt;td&gt;/&lt;a&gt;</code> nodes. The <code>&lt;td&gt;</code> nodes have class name <code>titleColumn</code>.</p>
 <pre class="r"><code>html &lt;- read_html(&quot;https://www.imdb.com/chart/top/?ref_=nv_mv_250&quot;)</code></pre>
 <pre class="r"><code># it finds all the &lt;td&gt; nodes, but we only need the node with class `titleColumn`
-td_nodes &lt;- html %&gt;% html_nodes(&quot;td&quot;)
-# it finds all the &lt;td&gt; nodes with class titleColumn
+td_nodes &lt;- html %&gt;% html_nodes(&quot;td&quot;)</code></pre>
+<pre class="r"><code># it finds all the &lt;td&gt; nodes with class titleColumn
 title_columns &lt;- html %&gt;% html_nodes(&quot;td.titleColumn&quot;)
 # it finds all the &lt;a&gt; nodes within &lt;td&gt; nodes with class titleColumn
 a_nodes &lt;- title_columns %&gt;% html_node(&quot;a&quot;)
@@ -283,12 +283,17 @@ head(movie_names)</code></pre>
   html_nodes(&quot;td.titleColumn&quot;) %&gt;% 
   html_node(&quot;a&quot;) %&gt;%
   html_text()</code></pre>
+<p>or even (faster but less readable)</p>
+<pre class="r"><code>movie_names &lt;- html %&gt;%
+  html_nodes(&quot;td.titleColumn a&quot;) %&gt;%
+  html_text()</code></pre>
 <p>Now, we also want to capture the ratings.</p>
 <pre class="r"><code>imdb_ratings &lt;-  html %&gt;%
   html_nodes(&quot;td.ratingColumn.imdbRating&quot;) %&gt;%
   html_node(&quot;strong&quot;) %&gt;%
   html_text()</code></pre>
-<pre class="r"><code>tibble(title = movie_names, rating = imdb_ratings)</code></pre>
+<pre class="r"><code># it only works if there are no missing values
+tibble(title = movie_names, rating = imdb_ratings)</code></pre>
 <pre><code>## # A tibble: 250 x 2
 ##    title                                             rating
 ##    &lt;chr&gt;                                             &lt;chr&gt; 
@@ -305,26 +310,137 @@ head(movie_names)</code></pre>
 ## # … with 240 more rows</code></pre>
 <p>How if you also want to get the years? There is also a cute function <code>html_table</code>.</p>
 <pre class="r"><code>html %&gt;% html_node(&quot;table.chart.full-width&quot;) %&gt;%
-  html_table() %&gt;% 
-  as_tibble(.name_repair = &quot;unique&quot;) %&gt;%
+  html_table() %&gt;%
   select(rank_and_title = `Rank &amp; Title`, rating = `IMDb Rating`) %&gt;%
   separate(rank_and_title, c(&quot;rank&quot;, &quot;title&quot;, &quot;year&quot;), sep = &quot;\n&quot;)</code></pre>
-<pre><code>## New names:
-## * `` -&gt; ...1
-## * `` -&gt; ...5</code></pre>
-<pre><code>## # A tibble: 250 x 4
-##    rank  title                                             year           rating
-##    &lt;chr&gt; &lt;chr&gt;                                             &lt;chr&gt;           &lt;dbl&gt;
-##  1 1.    &quot;      The Shawshank Redemption&quot;                  &quot;        (199…    9.2
-##  2 2.    &quot;      The Godfather&quot;                             &quot;        (197…    9.1
-##  3 3.    &quot;      The Godfather: Part II&quot;                    &quot;        (197…    9  
-##  4 4.    &quot;      The Dark Knight&quot;                           &quot;        (200…    9  
-##  5 5.    &quot;      12 Angry Men&quot;                              &quot;        (195…    8.9
-##  6 6.    &quot;      Schindler&#39;s List&quot;                          &quot;        (199…    8.9
-##  7 7.    &quot;      The Lord of the Rings: The Return of the … &quot;        (200…    8.9
-##  8 8.    &quot;      Pulp Fiction&quot;                              &quot;        (199…    8.8
-##  9 9.    &quot;      The Good, the Bad and the Ugly&quot;            &quot;        (196…    8.8
-## 10 10.   &quot;      The Lord of the Rings: The Fellowship of … &quot;        (200…    8.8
+<pre><code>##    rank                                                   title           year
+## 1    1.                                The Shawshank Redemption         (1994)
+## 2    2.                                           The Godfather         (1972)
+## 3    3.                                  The Godfather: Part II         (1974)
+## 4    4.                                         The Dark Knight         (2008)
+## 5    5.                                            12 Angry Men         (1957)
+## 6    6.                                        Schindler&#39;s List         (1993)
+## 7    7.           The Lord of the Rings: The Return of the King         (2003)
+## 8    8.                                            Pulp Fiction         (1994)
+## 9    9.                          The Good, the Bad and the Ugly         (1966)
+## 10  10.       The Lord of the Rings: The Fellowship of the Ring         (2001)
+## 11  11.                                              Fight Club         (1999)
+## 12  12.                                            Forrest Gump         (1994)
+## 13  13.                                               Inception         (2010)
+## 14  14.                   The Lord of the Rings: The Two Towers         (2002)
+## 15  15.          Star Wars: Episode V - The Empire Strikes Back         (1980)
+## 16  16.                                              The Matrix         (1999)
+## 17  17.                                              Goodfellas         (1990)
+## 18  18.                         One Flew Over the Cuckoo&#39;s Nest         (1975)
+## 19  19.                                           Seven Samurai         (1954)
+## 20  20.                                                   Se7en         (1995)
+## 21  21.                                       Life Is Beautiful         (1997)
+## 22  22.                                             City of God         (2002)
+## 23  23.                                The Silence of the Lambs         (1991)
+## 24  24.                                   It&#39;s a Wonderful Life         (1946)
+## 25  25.                      Star Wars: Episode IV - A New Hope         (1977)
+## 26  26.                                     Saving Private Ryan         (1998)
+## 27  27.                                          The Green Mile         (1999)
+## 28  28.                                           Spirited Away         (2001)
+## 29  29.                                            Interstellar         (2014)
+## 30  30.                                                Parasite         (2019)
+## 31  31.                                  Léon: The Professional         (1994)
+## 32  32.                                               Hara-Kiri         (1962)
+## 33  33.                                      The Usual Suspects         (1995)
+## 34  34.                                           The Lion King         (1994)
+## 35  35.                                             The Pianist         (2002)
+## 36  36.                                      Back to the Future         (1985)
+## 37  37.                              Terminator 2: Judgment Day         (1991)
+## 38  38.                                      American History X         (1998)
+## 39  39.                                            Modern Times         (1936)
+## 40  40.                                               Gladiator         (2000)
+## 41  41.                                                  Psycho         (1960)
+## 42  42.                                            The Departed         (2006)
+## 43  43.                                             City Lights         (1931)
+## 44  44.                                        The Intouchables         (2011)
+## 45  45.                                                Whiplash         (2014)
+## 46  46.                                  Grave of the Fireflies         (1988)
+## 47  47.                                            The Prestige         (2006)
+## 48  48.                            Once Upon a Time in the West         (1968)
+## 49  49.                                              Casablanca         (1942)
+## 50  50.                                         Cinema Paradiso         (1988)
+##    rating
+## 1     9.2
+## 2     9.1
+## 3     9.0
+## 4     9.0
+## 5     8.9
+## 6     8.9
+## 7     8.9
+## 8     8.8
+## 9     8.8
+## 10    8.8
+## 11    8.8
+## 12    8.8
+## 13    8.7
+## 14    8.7
+## 15    8.7
+## 16    8.6
+## 17    8.6
+## 18    8.6
+## 19    8.6
+## 20    8.6
+## 21    8.6
+## 22    8.6
+## 23    8.6
+## 24    8.6
+## 25    8.6
+## 26    8.6
+## 27    8.5
+## 28    8.5
+## 29    8.5
+## 30    8.5
+## 31    8.5
+## 32    8.5
+## 33    8.5
+## 34    8.5
+## 35    8.5
+## 36    8.5
+## 37    8.5
+## 38    8.5
+## 39    8.5
+## 40    8.5
+## 41    8.5
+## 42    8.5
+## 43    8.5
+## 44    8.5
+## 45    8.5
+## 46    8.5
+## 47    8.5
+## 48    8.4
+## 49    8.4
+## 50    8.4
+##  [ reached &#39;max&#39; / getOption(&quot;max.print&quot;) -- omitted 200 rows ]</code></pre>
+<p>An alternative approach without <code>html_table</code>.</p>
+<pre class="r"><code>rows &lt;- html %&gt;% html_nodes(&quot;table.chart.full-width tbody tr&quot;)</code></pre>
+<pre class="r"><code>map_dfr(rows, function(row) {
+  title &lt;- row %&gt;%
+    html_node(&quot;td.titleColumn a&quot;) %&gt;%
+    html_text()
+  rating &lt;-  row %&gt;%
+    html_node(&quot;td.ratingColumn.imdbRating&quot;) %&gt;%
+    html_node(&quot;strong&quot;) %&gt;%
+    html_text()
+  tibble(title = title, imdb_ratings = rating)
+})</code></pre>
+<pre><code>## # A tibble: 250 x 2
+##    title                                             imdb_ratings
+##    &lt;chr&gt;                                             &lt;chr&gt;       
+##  1 The Shawshank Redemption                          9.2         
+##  2 The Godfather                                     9.1         
+##  3 The Godfather: Part II                            9.0         
+##  4 The Dark Knight                                   9.0         
+##  5 12 Angry Men                                      8.9         
+##  6 Schindler&#39;s List                                  8.9         
+##  7 The Lord of the Rings: The Return of the King     8.9         
+##  8 Pulp Fiction                                      8.8         
+##  9 The Good, the Bad and the Ugly                    8.8         
+## 10 The Lord of the Rings: The Fellowship of the Ring 8.8         
 ## # … with 240 more rows</code></pre>
 <p>Now, we want to url link to the movie “The Shawshank Redemption”.</p>
 <pre class="r"><code>shawshank_url &lt;- html %&gt;%
@@ -344,27 +460,62 @@ head(movie_names)</code></pre>
 <h2>Stackoverflow example</h2>
 <p>Besides using node class, you could also search a node by its <code>id</code>.</p>
 <p>Here we are first extracting the <code>div</code> node with <code>id=&quot;questions&quot;</code>.</p>
-<pre class="r"><code>read_html(&quot;https://stackoverflow.com/questions/tagged/r&quot;) %&gt;%
+<pre class="r"><code>read_html(&quot;https://stackoverflow.com/questions/tagged/r?tab=newest&amp;pagesize=50&quot;) %&gt;%
   html_node(&quot;div#questions&quot;) %&gt;%
   html_nodes(&quot;div.summary&quot;) %&gt;%
-  html_nodes(&quot;h3&quot;) %&gt;%
-  html_nodes(&quot;a&quot;) %&gt;%
+  html_node(&quot;h3&quot;) %&gt;%
+  html_node(&quot;a&quot;) %&gt;%
   html_text()</code></pre>
-<pre><code>##  [1] &quot;Is there a way of assigning multiple variables to elements in a named R list in one line?&quot;                                                       
-##  [2] &quot;How to automatically collapse code in RShiny app server (reactives, renders, etc)&quot;                                                               
-##  [3] &quot;Progress bar while running a bat file through shiny app&quot;                                                                                         
-##  [4] &quot;How to search for a sentence written in different ways in text documents and then create a column to include each sentence pattern for each case&quot;
-##  [5] &quot;fct_lump does not work on my data and mtcars&quot;                                                                                                    
-##  [6] &quot;Regression imputation with binary variable with error “invalid factor level, NA generated”&quot;                                                      
-##  [7] &quot;How to make purrr recognize colnames of df in a list?&quot;                                                                                           
-##  [8] &quot;Subset a dataframe when a column changes value&quot;                                                                                                  
-##  [9] &quot;R: how to tabulate binary outcome according to certain variables in a data.frame&quot;                                                                
-## [10] &quot;Not all row groups are identical error in qwraps2&quot;                                                                                               
-## [11] &quot;Finding a specific value in any column&quot;                                                                                                          
-## [12] &quot;How to manually space tick marks in ggplot?&quot;                                                                                                     
-## [13] &quot;displaying relative frequency or density histograms in R and in ggplot2 in a few ways&quot;                                                           
-## [14] &quot;How to trans the last &#39;_&#39; in variable names that contain multiple &#39;_&#39;?&quot;                                                                          
-## [15] &quot;How to calculate factorial of large numbers in R [duplicate]&quot;</code></pre>
+<pre><code>##  [1] &quot;“Dynamic” Function to Calculate Multiple Columns Simultaneously in R&quot;                                                                 
+##  [2] &quot;correlation at the end of a pipe operation&quot;                                                                                           
+##  [3] &quot;Not able to use ggplot and gives an error&quot;                                                                                            
+##  [4] &quot;How to use my dataset to create suitable mixed linear model and pass model check? [migrated]&quot;                                         
+##  [5] &quot;Nested lappy in r&quot;                                                                                                                    
+##  [6] &quot;Add levels missing in one group to summary table using dplyr&quot;                                                                         
+##  [7] &quot;comparing groups and filter common observations using dplyr&quot;                                                                          
+##  [8] &quot;Resize table with pictures in Rmarkdown&quot;                                                                                              
+##  [9] &quot;tmap is creating a legend (range of values?) for a cropped rasterlayer&quot;                                                               
+## [10] &quot;How to set maximum number of fails in testthat?&quot;                                                                                      
+## [11] &quot;Implementation of average power function of noise (APFN)&quot;                                                                             
+## [12] &quot;How to set column names in R by repeating character? [duplicate]&quot;                                                                     
+## [13] &quot;R - &#39;for&#39; loop initial declarations are only allowed in C99 mode when installing processx package on linux redhat distribution&quot;       
+## [14] &quot;Keep station identifier with leading zero numeric&quot;                                                                                    
+## [15] &quot;Forcing a predictor into a forward step linear model in r&quot;                                                                            
+## [16] &quot;How can I create a loop to make my code more efficient in R?&quot;                                                                         
+## [17] &quot;Error in rexp(n, rate) : argument “rate” is missing, with no default&quot;                                                                 
+## [18] &quot;RStudio Sweave error -&gt; exit code -1073740791&quot;                                                                                        
+## [19] &quot;Prevent hypervolume calculations into negative trait space in R&quot;                                                                      
+## [20] &quot;Dynamic vertex attribute in ndtv&quot;                                                                                                     
+## [21] &quot;Removing \\\&quot; from string with cat()&quot;                                                                                                 
+## [22] &quot;extract specific value by matching name&quot;                                                                                              
+## [23] &quot;Function to discord minimum value from a vector not working&quot;                                                                          
+## [24] &quot;OMPR- trouble adding constraint&quot;                                                                                                      
+## [25] &quot;How to find X coordinate when Y = 0.3?&quot;                                                                                               
+## [26] &quot;Saving list with 120 dataframes (11.1 GB)&quot;                                                                                            
+## [27] &quot;R - identify sequences in a vector&quot;                                                                                                   
+## [28] &quot;Rapid subsetting of a rast brick&quot;                                                                                                     
+## [29] &quot;Build R package vignettes with paged data frames&quot;                                                                                     
+## [30] &quot;How to provide an optional fill parameter in ggplot2 graph?&quot;                                                                          
+## [31] &quot;Assign values from one data frame to another based on subject numbers [duplicate]&quot;                                                    
+## [32] &quot;Multiple variables in one bar plot in R&quot;                                                                                              
+## [33] &quot;How to reduce the vertical white space between plots using ggarrange in r&quot;                                                            
+## [34] &quot;k-folds cross validation to tune a hyperparameter for classification in R&quot;                                                            
+## [35] &quot;Attempt to apply non-function error, keras_predict&quot;                                                                                   
+## [36] &quot;rstan packages install from github&quot;                                                                                                   
+## [37] &quot;How to solve this R package tidyverse error&quot;                                                                                          
+## [38] &quot;How would you create R code to count black and white pixels in an image&quot;                                                              
+## [39] &quot;Pivot Wider table dyplr R&quot;                                                                                                            
+## [40] &quot;Multi-line time series color-coded by attribute in another dataframe (plotly/ggplot2 on pandas/R)&quot;                                    
+## [41] &quot;Cannot figure out why object does not exist&quot;                                                                                          
+## [42] &quot;Line segments coming out of the interior of a map of brazil using the ggrepel package&quot;                                                
+## [43] &quot;How to extract number within but excluding brackets with str_extract() from package stringr?&quot;                                         
+## [44] &quot;R dataset from long to wide - under a specific condition [duplicate]&quot;                                                                 
+## [45] &quot;linear programming optimization in R?&quot;                                                                                                
+## [46] &quot;Avoiding “Error: Aesthetics must be either length 1 or the same as the data (9): y” in geom_errorbar&quot;                                 
+## [47] &quot;Estimate and 95% CI for planned contrasts in R&quot;                                                                                       
+## [48] &quot;How to separate outliers and far outliers in boxplot&quot;                                                                                 
+## [49] &quot;How to create multiple new columns based of off groups of columns that start with a certain prefix and also contain a certain string?&quot;
+## [50] &quot;Error in if statement with NA in data in R [duplicate]&quot;</code></pre>
 </div>
 </div>
 <div id="scraping-dynamic-webpages" class="section level1">
@@ -387,22 +538,37 @@ rd &lt;- remoteDriver(port = port)</code></pre>
 stopifnot(is.null(rd$sessionInfo$message))
 
 rd$navigate(&quot;https://registrar-apps.ucdavis.edu/courses/search/index.cfm&quot;)</code></pre>
-<pre class="r"><code>rd$findElement(&quot;css&quot;, &quot;#course_number&quot;)$clickElement()
+<pre class="r"><code>rd$findElement(&quot;css&quot;, &quot;input#course_number&quot;)$clickElement()
 rd$sendKeysToActiveElement(list(&quot;STA&quot;))
 rd$findElement(
     &quot;css&quot;, 
-    &#39;#home_tablez_bz input[name=&quot;search&quot;]&#39;
+    &#39;table#home_tablez_bz input[name=&quot;search&quot;]&#39;
   )$clickElement()</code></pre>
-<pre class="r"><code>retry::retry({
-  rd$getPageSource()[[1]] %&gt;% 
+<pre class="r"><code>Sys.sleep(5)  # We might need to wait until the result is shown.
+df &lt;- rd$getPageSource()[[1]] %&gt;% 
     read_html() %&gt;% 
     html_node(&quot;div#courseResultsDiv table&quot;) %&gt;% 
-    html_table() %&gt;% {
-      df &lt;- slice(., -(1:4))
-      names(df) &lt;- slice(., 4)
-      df
-    } %&gt;% 
-    separate(&quot;CRN Time/Days&quot;, c(&quot;CRN&quot;, &quot;Time/Days&quot;), &quot;\n\\s+\t&quot;)
+    html_table()
+
+df_colnames &lt;- df %&gt;% slice(4)
+df &lt;- df %&gt;%
+  slice(., -(1:4))
+names(df) &lt;- df_colnames
+df %&gt;%
+  separate(`CRN Time/Days`, c(&quot;CRN&quot;, &quot;Time/Days&quot;), &quot;\n\\s+\t&quot;)</code></pre>
+<pre class="r"><code># or we could use the retry package
+retry::retry({
+    df &lt;- rd$getPageSource()[[1]] %&gt;% 
+    read_html() %&gt;% 
+    html_node(&quot;div#courseResultsDiv table&quot;) %&gt;% 
+    html_table()
+
+    df_colnames &lt;- df %&gt;% slice(4)
+    df &lt;- df %&gt;%
+      slice(., -(1:4))
+    names(df) &lt;- df_colnames
+    df %&gt;%
+      separate(`CRN Time/Days`, c(&quot;CRN&quot;, &quot;Time/Days&quot;), &quot;\n\\s+\t&quot;)
   },
   when = &quot;xml_missing&quot;,
   timeout = 5
@@ -412,22 +578,22 @@ rd$findElement(
 <pre><code>##       CRN             Time/Days   Course Location
 ## 1  60364  11:00 - 11:50 AM, MWF STA 010REMOTE TBA
 ## 2  60364     12:10 - 1:00 PM, T STA 010REMOTE TBA
-## 3  60365      8:00 - 8:50 AM, T STA 013REMOTE TBA
-## 4  60365    9:00 - 9:50 AM, MWF STA 013REMOTE TBA
+## 3  60365    9:00 - 9:50 AM, MWF STA 013REMOTE TBA
+## 4  60365      8:00 - 8:50 AM, T STA 013REMOTE TBA
 ## 5  60366    9:00 - 9:50 AM, MWF STA 013REMOTE TBA
 ## 6  60366      9:00 - 9:50 AM, T STA 013REMOTE TBA
-## 7  60367    10:00 - 10:50 AM, T STA 013REMOTE TBA
-## 8  60367    9:00 - 9:50 AM, MWF STA 013REMOTE TBA
-## 9  60368    11:00 - 11:50 AM, T STA 013REMOTE TBA
-## 10 60368    9:00 - 9:50 AM, MWF STA 013REMOTE TBA
-## 11 60369     12:10 - 1:00 PM, T STA 013REMOTE TBA
-## 12 60369    9:00 - 9:50 AM, MWF STA 013REMOTE TBA
-## 13 60370      1:10 - 2:00 PM, T STA 013REMOTE TBA
-## 14 60370    9:00 - 9:50 AM, MWF STA 013REMOTE TBA
+## 7  60367    9:00 - 9:50 AM, MWF STA 013REMOTE TBA
+## 8  60367    10:00 - 10:50 AM, T STA 013REMOTE TBA
+## 9  60368    9:00 - 9:50 AM, MWF STA 013REMOTE TBA
+## 10 60368    11:00 - 11:50 AM, T STA 013REMOTE TBA
+## 11 60369    9:00 - 9:50 AM, MWF STA 013REMOTE TBA
+## 12 60369     12:10 - 1:00 PM, T STA 013REMOTE TBA
+## 13 60370    9:00 - 9:50 AM, MWF STA 013REMOTE TBA
+## 14 60370      1:10 - 2:00 PM, T STA 013REMOTE TBA
 ## 15 60371    9:00 - 9:50 AM, MWF STA 013REMOTE TBA
 ## 16 60371      2:10 - 3:00 PM, T STA 013REMOTE TBA
-## 17 60372      3:10 - 4:00 PM, T STA 013REMOTE TBA
-## 18 60372    9:00 - 9:50 AM, MWF STA 013REMOTE TBA
+## 17 60372    9:00 - 9:50 AM, MWF STA 013REMOTE TBA
+## 18 60372      3:10 - 4:00 PM, T STA 013REMOTE TBA
 ## 19 60374    8:00 - 8:50 AM, MWF STA 013REMOTE TBA
 ## 20 60374      8:00 - 8:50 AM, R STA 013REMOTE TBA
 ## 21 60375    8:00 - 8:50 AM, MWF STA 013REMOTE TBA
@@ -436,8 +602,8 @@ rd$findElement(
 ## 24 60376    10:00 - 10:50 AM, R STA 013REMOTE TBA
 ## 25 60377    8:00 - 8:50 AM, MWF STA 013REMOTE TBA
 ##                   Sec. Seats Avail.
-## 1  001 \n                        17
-## 2  001 \n                        17
+## 1  001 \n                        16
+## 2  001 \n                        16
 ## 3  A01 \n                         0
 ## 4  A01 \n                         0
 ## 5  A02 \n                         0
@@ -450,17 +616,17 @@ rd$findElement(
 ## 12 A05 \n                         0
 ## 13 A06 \n                         0
 ## 14 A06 \n                         0
-## 15  A07 \n                        1
-## 16  A07 \n                        1
-## 17  A08 \n                        1
-## 18  A08 \n                        1
+## 15 A07 \n                         0
+## 16 A07 \n                         0
+## 17 A08 \n                         0
+## 18 A08 \n                         0
 ## 19 B01 \n                         0
 ## 20 B01 \n                         0
 ## 21  B02 \n                        7
 ## 22  B02 \n                        7
-## 23 B03 \n                        29
-## 24 B03 \n                        29
-## 25 B04 \n                        30
+## 23 B03 \n                        30
+## 24 B03 \n                        30
+## 25 B04 \n                        29
 ##                                                                                        Title Former GE Credit • New GE Credit
 ## 1  Statistical Thinking\n                            SE SS W\n                            \n                         •  QL SE
 ## 2  Statistical Thinking\n                            SE SS W\n                            \n                         •  QL SE
@@ -535,26 +701,26 @@ rd$navigate(&quot;https://stats.nba.com/leaders/?SeasonType=Regular%20Season&quo
   when = &quot;xml_missing&quot;,
   timeout = 5
 )  </code></pre>
-<pre><code>##   #                Player GP  MIN  PTS  FGM  FGA  FG% 3PM  3PA  3P%  FTM  FTA
-## 1 1          Bradley Beal 27 35.7 32.7 11.6 24.1 48.0 2.4  7.3 33.2  7.1  8.0
-## 2 2         Stephen Curry 32 34.3 30.0  9.9 20.7 47.9 5.0 11.9 41.6  5.2  5.5
-## 3 3           Joel Embiid 26 32.9 29.8  9.3 17.7 52.7 1.2  2.8 40.5 10.0 11.7
-## 4 4        Damian Lillard 30 35.7 29.6  9.2 20.7 44.7 4.1 10.9 37.9  7.0  7.5
-## 5 5           Luka Doncic 29 35.3 28.9 10.0 21.1 47.4 2.6  7.3 34.9  6.3  8.2
-## 6 6           Zach LaVine 31 35.8 28.8 10.3 19.7 52.3 3.6  8.1 44.0  4.6  5.3
-## 7 7 Giannis Antetokounmpo 31 33.6 28.6 10.3 18.5 55.7 1.1  3.9 28.1  7.0 10.6
-## 8 8            Trae Young 30 34.9 27.2  7.9 18.1 43.8 2.4  6.4 37.5  8.9 10.2
-## 9 9         Kawhi Leonard 26 34.8 27.1  9.8 19.2 51.2 2.0  5.1 39.1  5.4  6.2
+<pre><code>##   #                Player GP  MIN  PTS  FGM  FGA  FG% 3PM  3PA  3P% FTM  FTA
+## 1 1          Bradley Beal 30 35.7 33.2 11.7 24.1 48.5 2.4  7.1 33.8 7.4  8.3
+## 2 2           Joel Embiid 29 32.8 29.8  9.3 17.9 52.1 1.2  2.9 41.7 9.9 11.6
+## 3 3        Damian Lillard 32 35.9 29.6  9.3 20.8 44.5 4.2 11.1 38.0 6.9  7.4
+## 4 4         Stephen Curry 34 34.1 29.5  9.7 20.3 47.8 4.8 11.7 41.3 5.3  5.6
+## 5 5 Giannis Antetokounmpo 33 33.9 29.2 10.5 19.0 55.5 1.2  4.0 28.6 6.9 10.4
+## 6 6           Luka Doncic 32 35.2 28.6 10.0 20.9 47.8 2.7  7.4 35.7 6.0  8.0
+## 7 7           Zach LaVine 33 35.6 28.5 10.2 19.6 52.2 3.5  8.1 43.3 4.5  5.3
+## 8 8          Nikola Jokic 34 35.9 27.1 10.4 18.4 56.6 1.6  3.8 41.1 4.6  5.2
+## 9 9         Kawhi Leonard 29 34.7 26.8  9.7 18.9 51.1 2.0  5.1 38.9 5.5  6.3
 ##    FT% OREB DREB  REB AST STL BLK TOV  EFF
-## 1 88.9  1.4  3.9  5.3 4.9 1.4 0.4 3.3 28.0
-## 2 93.8  0.5  5.0  5.5 6.3 1.2 0.1 3.1 28.8
-## 3 85.5  2.1  9.2 11.3 3.1 1.3 1.3 3.4 33.3
-## 4 93.4  0.5  3.9  4.4 8.0 1.0 0.2 3.3 28.1
-## 5 77.2  0.9  7.7  8.6 9.2 1.0 0.7 4.2 31.2
-## 6 86.6  0.7  4.6  5.3 5.0 1.1 0.4 3.9 26.7
-## 7 65.9  1.8 10.0 11.8 6.0 1.3 1.3 3.7 33.5
-## 8 87.5  0.8  3.2  4.0 9.5 0.8 0.3 4.3 26.1
-## 9 87.0  0.9  5.3  6.2 4.8 1.7 0.6 1.8 28.3
+## 1 89.9  1.4  4.0  5.4 4.8 1.4 0.4 3.3 28.7
+## 2 86.0  2.1  9.2 11.3 3.3 1.2 1.3 3.2 33.6
+## 3 93.2  0.5  3.9  4.3 8.1 1.0 0.3 3.3 27.9
+## 4 93.8  0.5  4.9  5.4 6.4 1.3 0.1 3.1 28.5
+## 5 66.3  1.9  9.9 11.8 5.9 1.2 1.4 3.7 33.8
+## 6 75.7  0.8  7.6  8.4 9.0 1.0 0.7 4.2 30.7
+## 7 85.1  0.7  4.6  5.3 5.0 1.1 0.4 3.9 26.2
+## 8 88.2  2.8  8.2 11.0 8.5 1.6 0.7 3.1 37.2
+## 9 87.4  1.0  5.3  6.3 4.9 1.6 0.6 1.9 28.2
 ##  [ reached &#39;max&#39; / getOption(&quot;max.print&quot;) -- omitted 41 rows ]</code></pre>
 <p>loop over the table by clicking the next button</p>
 <pre class="r"><code>leader &lt;- NULL
@@ -570,27 +736,27 @@ for (i in 1:6) {
   nextbutton$clickElement()
 }</code></pre>
 <pre class="r"><code>leader</code></pre>
-<pre><code>##   #                Player GP  MIN  PTS  FGM  FGA  FG% 3PM  3PA  3P%  FTM  FTA
-## 1 1          Bradley Beal 27 35.7 32.7 11.6 24.1 48.0 2.4  7.3 33.2  7.1  8.0
-## 2 2         Stephen Curry 32 34.3 30.0  9.9 20.7 47.9 5.0 11.9 41.6  5.2  5.5
-## 3 3           Joel Embiid 26 32.9 29.8  9.3 17.7 52.7 1.2  2.8 40.5 10.0 11.7
-## 4 4        Damian Lillard 30 35.7 29.6  9.2 20.7 44.7 4.1 10.9 37.9  7.0  7.5
-## 5 5           Luka Doncic 29 35.3 28.9 10.0 21.1 47.4 2.6  7.3 34.9  6.3  8.2
-## 6 6           Zach LaVine 31 35.8 28.8 10.3 19.7 52.3 3.6  8.1 44.0  4.6  5.3
-## 7 7 Giannis Antetokounmpo 31 33.6 28.6 10.3 18.5 55.7 1.1  3.9 28.1  7.0 10.6
-## 8 8            Trae Young 30 34.9 27.2  7.9 18.1 43.8 2.4  6.4 37.5  8.9 10.2
-## 9 9         Kawhi Leonard 26 34.8 27.1  9.8 19.2 51.2 2.0  5.1 39.1  5.4  6.2
+<pre><code>##   #                Player GP  MIN  PTS  FGM  FGA  FG% 3PM  3PA  3P% FTM  FTA
+## 1 1          Bradley Beal 30 35.7 33.2 11.7 24.1 48.5 2.4  7.1 33.8 7.4  8.3
+## 2 2           Joel Embiid 29 32.8 29.8  9.3 17.9 52.1 1.2  2.9 41.7 9.9 11.6
+## 3 3        Damian Lillard 32 35.9 29.6  9.3 20.8 44.5 4.2 11.1 38.0 6.9  7.4
+## 4 4         Stephen Curry 34 34.1 29.5  9.7 20.3 47.8 4.8 11.7 41.3 5.3  5.6
+## 5 5 Giannis Antetokounmpo 33 33.9 29.2 10.5 19.0 55.5 1.2  4.0 28.6 6.9 10.4
+## 6 6           Luka Doncic 32 35.2 28.6 10.0 20.9 47.8 2.7  7.4 35.7 6.0  8.0
+## 7 7           Zach LaVine 33 35.6 28.5 10.2 19.6 52.2 3.5  8.1 43.3 4.5  5.3
+## 8 8          Nikola Jokic 34 35.9 27.1 10.4 18.4 56.6 1.6  3.8 41.1 4.6  5.2
+## 9 9         Kawhi Leonard 29 34.7 26.8  9.7 18.9 51.1 2.0  5.1 38.9 5.5  6.3
 ##    FT% OREB DREB  REB AST STL BLK TOV  EFF
-## 1 88.9  1.4  3.9  5.3 4.9 1.4 0.4 3.3 28.0
-## 2 93.8  0.5  5.0  5.5 6.3 1.2 0.1 3.1 28.8
-## 3 85.5  2.1  9.2 11.3 3.1 1.3 1.3 3.4 33.3
-## 4 93.4  0.5  3.9  4.4 8.0 1.0 0.2 3.3 28.1
-## 5 77.2  0.9  7.7  8.6 9.2 1.0 0.7 4.2 31.2
-## 6 86.6  0.7  4.6  5.3 5.0 1.1 0.4 3.9 26.7
-## 7 65.9  1.8 10.0 11.8 6.0 1.3 1.3 3.7 33.5
-## 8 87.5  0.8  3.2  4.0 9.5 0.8 0.3 4.3 26.1
-## 9 87.0  0.9  5.3  6.2 4.8 1.7 0.6 1.8 28.3
-##  [ reached &#39;max&#39; / getOption(&quot;max.print&quot;) -- omitted 244 rows ]</code></pre>
+## 1 89.9  1.4  4.0  5.4 4.8 1.4 0.4 3.3 28.7
+## 2 86.0  2.1  9.2 11.3 3.3 1.2 1.3 3.2 33.6
+## 3 93.2  0.5  3.9  4.3 8.1 1.0 0.3 3.3 27.9
+## 4 93.8  0.5  4.9  5.4 6.4 1.3 0.1 3.1 28.5
+## 5 66.3  1.9  9.9 11.8 5.9 1.2 1.4 3.7 33.8
+## 6 75.7  0.8  7.6  8.4 9.0 1.0 0.7 4.2 30.7
+## 7 85.1  0.7  4.6  5.3 5.0 1.1 0.4 3.9 26.2
+## 8 88.2  2.8  8.2 11.0 8.5 1.6 0.7 3.1 37.2
+## 9 87.4  1.0  5.3  6.3 4.9 1.6 0.6 1.9 28.2
+##  [ reached &#39;max&#39; / getOption(&quot;max.print&quot;) -- omitted 247 rows ]</code></pre>
 <pre class="r"><code># close the browser finally
 server$stop()</code></pre>
 <pre><code>## [1] TRUE</code></pre>

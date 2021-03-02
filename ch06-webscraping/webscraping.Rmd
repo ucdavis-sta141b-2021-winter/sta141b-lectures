@@ -50,7 +50,7 @@ It is important to identify the thing that you want to scrape in the webpage. Th
 
 CSS selector is the most common way to locate an object in a website. 
 
-- `tag`: the name of the tag, for example `td` and `a` tags
+- `tag`: the name of the tag, for example `<td>` and `<a>` tags
 - `.class`: class of an object
 - `#id`: id of an object
 
@@ -65,10 +65,13 @@ We see that all movies names are under the `<td>/<a>` nodes. The `<td>` nodes ha
 html <- read_html("https://www.imdb.com/chart/top/?ref_=nv_mv_250")
 ```
 
-
 ```{r}
 # it finds all the <td> nodes, but we only need the node with class `titleColumn`
 td_nodes <- html %>% html_nodes("td")
+```
+
+
+```{r}
 # it finds all the <td> nodes with class titleColumn
 title_columns <- html %>% html_nodes("td.titleColumn")
 # it finds all the <a> nodes within <td> nodes with class titleColumn
@@ -85,7 +88,12 @@ movie_names <- html %>%
   html_node("a") %>%
   html_text()
 ```
-
+or even (faster but less readable)
+```{r}
+movie_names <- html %>%
+  html_nodes("td.titleColumn a") %>%
+  html_text()
+```
 
 Now, we also want to capture the ratings.
 
@@ -97,6 +105,7 @@ imdb_ratings <-  html %>%
 ```
 
 ```{r}
+# it only works if there are no missing values
 tibble(title = movie_names, rating = imdb_ratings)
 ```
 
@@ -104,12 +113,29 @@ How if you also want to get the years? There is also a cute function `html_table
 
 ```{r}
 html %>% html_node("table.chart.full-width") %>%
-  html_table() %>% 
-  as_tibble(.name_repair = "unique") %>%
+  html_table() %>%
   select(rank_and_title = `Rank & Title`, rating = `IMDb Rating`) %>%
   separate(rank_and_title, c("rank", "title", "year"), sep = "\n")
 ```
 
+
+An alternative approach without `html_table`.
+```{r}
+rows <- html %>% html_nodes("table.chart.full-width tbody tr")
+```
+
+```{r}
+map_dfr(rows, function(row) {
+  title <- row %>%
+    html_node("td.titleColumn a") %>%
+    html_text()
+  rating <-  row %>%
+    html_node("td.ratingColumn.imdbRating") %>%
+    html_node("strong") %>%
+    html_text()
+  tibble(title = title, imdb_ratings = rating)
+})
+```
 
 
 Now, we want to url link to the movie "The Shawshank Redemption".
@@ -146,11 +172,11 @@ Besides using node class, you could also search a node by its `id`.
 Here we are first extracting the `div` node with `id="questions"`.
 
 ```{r}
-read_html("https://stackoverflow.com/questions/tagged/r") %>%
+read_html("https://stackoverflow.com/questions/tagged/r?tab=newest&pagesize=50") %>%
   html_node("div#questions") %>%
   html_nodes("div.summary") %>%
-  html_nodes("h3") %>%
-  html_nodes("a") %>%
+  html_node("h3") %>%
+  html_node("a") %>%
   html_text()
 ```
 
@@ -190,26 +216,44 @@ rd$navigate("https://registrar-apps.ucdavis.edu/courses/search/index.cfm")
 ```
 
 ```{r}
-rd$findElement("css", "#course_number")$clickElement()
+rd$findElement("css", "input#course_number")$clickElement()
 rd$sendKeysToActiveElement(list("STA"))
 rd$findElement(
     "css", 
-    '#home_tablez_bz input[name="search"]'
+    'table#home_tablez_bz input[name="search"]'
   )$clickElement()
 ```
 
 
-```{r}
-retry::retry({
-  rd$getPageSource()[[1]] %>% 
+```{r, eval = FALSE}
+Sys.sleep(5)  # We might need to wait until the result is shown.
+df <- rd$getPageSource()[[1]] %>% 
     read_html() %>% 
     html_node("div#courseResultsDiv table") %>% 
-    html_table() %>% {
-      df <- slice(., -(1:4))
-      names(df) <- slice(., 4)
-      df
-    } %>% 
-    separate("CRN Time/Days", c("CRN", "Time/Days"), "\n\\s+\t")
+    html_table()
+
+df_colnames <- df %>% slice(4)
+df <- df %>%
+  slice(., -(1:4))
+names(df) <- df_colnames
+df %>%
+  separate(`CRN Time/Days`, c("CRN", "Time/Days"), "\n\\s+\t")
+```
+
+```{r}
+# or we could use the retry package
+retry::retry({
+    df <- rd$getPageSource()[[1]] %>% 
+    read_html() %>% 
+    html_node("div#courseResultsDiv table") %>% 
+    html_table()
+
+    df_colnames <- df %>% slice(4)
+    df <- df %>%
+      slice(., -(1:4))
+    names(df) <- df_colnames
+    df %>%
+      separate(`CRN Time/Days`, c("CRN", "Time/Days"), "\n\\s+\t")
   },
   when = "xml_missing",
   timeout = 5
