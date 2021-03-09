@@ -193,13 +193,13 @@ str_which(fruit, "b|r")
 shopping_list <- c("apples x4", "bag of flour", "bag of sugar", "milk x2")
 
 # numbers
-str_extract(shopping_list, "\\d")
+str_extract(shopping_list, R"(\d)")
 # lower case chars
 str_extract(shopping_list, "[a-z]+")
 # lower case chars of length 1 to 4
 str_extract(shopping_list, "[a-z]{1,4}")
 # lower case chars of length 1 to 4 with word boundary
-str_extract(shopping_list, "\\b[a-z]{1,4}\\b")
+str_extract(shopping_list, R"(\b[a-z]{1,4}\b)")
 
 str_extract_all(shopping_list, "[a-z]+")
 str_extract_all(shopping_list, "[a-z]+", simplify = TRUE)
@@ -375,7 +375,7 @@ str_match_all("abaa\na", regex("^a", multiline = TRUE))
 str_match_all("abaa\na", regex("^A", ignore_case = TRUE, multiline = TRUE))
 ```
 
-## More advanced topics of regex (if time is permitted)
+## More advanced topics of regex
 
 I assume that you are now comfortable with the basic regex. Let's talk about some more advanced topics.
 
