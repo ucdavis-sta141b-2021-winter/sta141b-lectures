@@ -1,0 +1,405 @@
+---
+title: "Regex"
+output: 
+  html_document: 
+    toc: yes
+---
+
+# Text Mining
+
+There are quite a number of R packages for doing text mining. For example,
+
+- tm
+- quanteda
+- tidytext
+- corpus
+- koRpus
+
+See here for a nice comparison between the packages: https://quanteda.io/articles/pkgdown/comparison.html
+
+We will focus on `tidytext` for its simplicity.
+
+
+So what do we do with text mining?
+
+(from https://www.linguamatics.com/)
+> Text mining (also referred to as text analytics) is an artificial intelligence (AI) technology that uses natural language processing (NLP) to transform the free (unstructured) text in documents and databases into normalized, structured data suitable for analysis or to drive machine learning (ML) algorithms.
+
+(Disclaimer: I am not an expert of NLP or text mining)
+
+
+Text data often are stored in the following ways
+
+- String: Text can, of course, be stored as strings, i.e., character vectors, within R, and often text data is first read into memory in this form.
+- Corpus: These types of objects typically contain raw strings annotated with additional metadata and details.
+- Document-term matrix: This is a sparse matrix describing a collection (i.e., a corpus) of documents with one row for each document and one column for each term. The value in the matrix is typically word count or `tf-idf`
+
+
+```{r}
+library(tidyverse)
+library(tidytext)
+```
+
+```{r}
+# A poem by Emily Dickinson 
+text <- c("Because I could not stop for Death -",
+          "He kindly stopped for me -",
+          "The Carriage held but just Ourselves -",
+          "and Immortality")
+df <- tibble(line = 1:4, text = text)
+```
+
+We want to convert the data frame so that it has one-token-per-document-per-row.
+
+```{r}
+df %>% 
+  unnest_tokens(word, text)
+```
+
+After using `unnest_tokens`, we've split each row so that there is one token (word) in each row of the new data frame; the default tokenization in `unnest_tokens()` is for single words (unigram), as shown here. Also notice:
+
+- Other columns, such as the line number each word came from, are retained.
+- Punctuation has been stripped.
+- By default, `unnest_tokens()` converts the tokens to lowercase, which makes them easier to compare or combine with other datasets. (Use the `to_lower = FALSE` argument to turn off this behavior).
+
+
+
+Often in text analysis, we will want to remove stop words; stop words are words that are not useful for an analysis, typically extremely common words such as “the”, “of”, “to”, and so forth in English.
+```{r}
+data(stop_words)
+stop_words
+```
+
+```{r}
+df %>% 
+  unnest_tokens(word, text) %>% 
+  anti_join(stop_words)
+```
+
+
+
+```{r}
+library(rvest)
+```
+
+
+Try to read some news headlines from abc news
+```{r, cache = TRUE}
+headlines <- read_html("https://abcnews.go.com/") %>% 
+  html_nodes("div.headlines-li-div")
+
+news_df <- tibble(
+    title = headlines %>% html_text() %>% str_trim(),
+    url = headlines %>%  html_node("a") %>% html_attr("href")
+  ) %>% 
+  filter(str_detect(url, fixed("https://abcnews.go.com"))) %>% 
+  distinct(url, .keep_all = TRUE) %>% 
+  mutate(id = sprintf("%02d", row_number()))
+```
+
+Read the contents
+```{r, cache = TRUE}
+news_content <- NULL
+for (i in seq_len(nrow(news_df))) {
+  news_content <- bind_rows(
+    news_content, 
+    read_html(news_df$url[i]) %>% 
+      html_nodes("div.Article p") %>% 
+      html_text() %>% {
+        tibble(id = news_df$id[i], text = c(news_df$title[i], .))
+      }
+  )
+}
+```
+
+```{r}
+news_tokens <- news_content %>%
+  unnest_tokens(word, text) %>% 
+  anti_join(stop_words) %>% 
+  group_by(id) %>%
+  count(word, sort = TRUE) %>% 
+  arrange(id)
+```
+
+Use relative frequencies
+```{r}
+(news_propotions <- news_tokens %>% 
+  group_by(id) %>% 
+  mutate(propotion = n / sum(n)) %>% 
+  select(-n) %>%
+  arrange(id, desc(propotion)))
+```
+
+
+```{r}
+library(wordcloud)
+news_tokens %>% 
+  filter(id == "01") %>% 
+  with(wordcloud(
+    word, n, min.freq = 2, max.words = 100, random.order = FALSE,
+    colors = brewer.pal(8, "Dark2")))
+```
+
+
+
+```{r, fig.height = 7, fig.width = 7}
+news_tokens %>%
+  slice_max(n, n = 5, with_ties = FALSE) %>%
+  ggplot(aes(x = fct_reorder(word, n), y = n, fill = id)) + 
+      geom_bar(stat = "identity", na.rm = TRUE, show.legend = FALSE) +
+      xlab("word") +
+      facet_wrap(~id, scales = "free") +
+      coord_flip()
+```
+
+The order the categories in each facet are not ordered correctly. 
+Following https://drsimonj.svbtle.com/ordering-categories-within-ggplot2-facets, I got the following fix.
+
+
+```{r, fig.height = 7, fig.width = 7}
+news_tokens %>%
+  slice_max(n, n = 5, with_ties = FALSE) %>%
+  ungroup() %>%
+  arrange(id, n) %>% 
+  mutate(order = row_number()) %>% {
+    ggplot(., aes(x = order, y = n, fill = id)) + 
+      geom_bar(stat = "identity", na.rm = TRUE, show.legend = FALSE) +
+      xlab("word") +
+      facet_wrap(~id, scales = "free") +
+      coord_flip() +
+      scale_x_continuous(breaks = .$order, labels = .$word, expand = c(0, 0))
+  }
+```
+
+
+## Sentiment analysis
+
+The `tidytext` package contains several sentiment lexicons. Three general-purpose lexicons are
+
+- `AFINN` from Finn Årup Nielsen,
+- `bing` from Bing Liu and collaborators, and
+- `nrc` from Saif Mohammad and Peter Turney.
+
+All three of these lexicons are based on unigrams, i.e., single words. These lexicons contain many English words and the words are assigned scores for positive/negative sentiment, and also possibly emotions like joy, anger, sadness, and so forth. 
+It is important to keep in mind that these methods do not take into account qualifiers before a word, such as in “no good” or “not true”; a lexicon-based method like this is based on unigrams only.
+
+
+```{r}
+library(textdata)
+
+get_sentiments("afinn")
+get_sentiments("bing")
+get_sentiments("nrc")
+```
+
+
+```{r}
+news_tokens %>% 
+  left_join(get_sentiments("bing")) %>% 
+  group_by(id) %>% 
+  summarize(  # the frequencies are ignored in this analysis
+    positive = sum(sentiment == "positive", na.rm = TRUE), 
+    negative = sum(sentiment == "negative", na.rm = TRUE), 
+    netural = n() - positive - negative) %>%
+  mutate(
+    id,
+    sentiment = case_when(
+      positive > negative ~ "positive",
+      positive < negative ~ "negative",
+      TRUE ~ "netural"
+    )
+  ) %>% 
+  left_join(select(news_df, id, title)) %>% 
+  mutate(title = str_trunc(title, 80)) %>% 
+  select(sentiment, title)
+```
+
+## Analyzing word and document frequency: tf-idf
+
+A central question in text mining and natural language processing is how to quantify what a document is about.
+One measure of how important a word may be is its term frequency. Another approach is to look at a term’s inverse document frequency (idf), which decreases the weight for commonly used words and increases the weight for words that are not used very much.
+
+$$
+\text{idf} = \ln\left(\frac{n_{\text{documents}}}{n_{\text{documents containing term}}} \right)
+$$
+
+$$
+\text{tf_idf} = \text{tf} \times \text{idf}
+$$
+
+Show the 3 most important words in each document.
+```{r}
+news_tokens %>% 
+  bind_tf_idf(word, id, n) %>%
+  slice_max(tf_idf, n = 3) %>%
+  select(id, word, n, tf_idf)
+```
+
+Using term frequency and inverse document frequency allows us to find words that are characteristic for one document within a collection of documents.
+
+## n-grams
+
+We’ve been using the unnest_tokens function to tokenize by word, or sometimes by sentence, which is useful for the kinds of sentiment and frequency analyses we’ve been doing so far. But we can also use the function to tokenize into consecutive sequences of words, called n-grams.
+
+
+## Using bigrams to provide context in sentiment analysis
+
+Our sentiment analysis approach above simply counted the appearance of positive or negative words. One of the problems with this approach is that a word’s context can matter nearly as much as its presence. For example, the words “happy” and “like” will be counted as positive, even in a sentence like “I’m not happy and I don’t like it!”
+
+
+```{r}
+# stop words are not removed in this case
+news_tokens2 <- news_content %>%
+  unnest_tokens(bigram, text, token = "ngrams", n = 2) %>% 
+  separate(bigram, c("word1", "word2"), sep = " ")
+```
+
+Back to the sentiment analysis
+```{r}
+negate_words <- c("not", "without", "no", "can't", "don't", "won't")
+
+news_tokens2 %>% 
+  group_by(id) %>% 
+  count(word1, word2) %>% 
+  left_join(get_sentiments("bing"), by = c("word2" = "word")) %>%
+  mutate(sentiment = case_when(
+    word1 %in% negate_words & sentiment == "negative" ~ "positive", 
+    word1 %in% negate_words & sentiment == "positive" ~ "negative",
+    TRUE ~ sentiment)) %>% 
+  summarize(
+    positive = sum(sentiment == "positive", na.rm = TRUE), 
+    negative = sum(sentiment == "negative", na.rm = TRUE), 
+    netural = n() - positive - negative) %>%
+  mutate(
+    id,
+    sentiment = case_when(
+      positive > negative ~ "positive",
+      positive < negative ~ "negative",
+      TRUE ~ "netural"
+    )
+  ) %>% 
+  left_join(select(news_df, id, title)) %>% 
+  mutate(title = str_trunc(title, 80)) %>% 
+  select(sentiment, title)
+```
+
+
+
+## Cluster analysis
+
+> Cluster analysis or clustering is the task of grouping a set of objects in such a way that objects in the same group (called a cluster) are more similar (in some sense) to each other than to those in other groups (clusters)
+
+
+First, we will need to define similarity.
+One way to quantity how similar two documents are is the cosine distance.
+
+Compare to regular euclidean distance, it is more situable for sparse vectors.
+
+
+```{r}
+library(proxy)
+docsdissim <- dist(as.matrix(cast_dtm(news_tokens, id, word, n)), method = "cosine")
+```
+
+
+
+```{r}
+h <- hclust(docsdissim, method = "ward.D2")
+plot(h)
+```
+
+We could use `cutree` to pick the number of groups.
+
+
+```{r}
+tibble(topic = cutree(h, k = 3), title = news_df$title) %>% 
+  arrange(topic) %>% 
+  mutate(title = str_trunc(title, 80)) %>% 
+  select(topic, title)
+```
+
+In cluster analysis, we only assign a single topic to a single document. In reality, a single document may contain multiple topics.
+
+## LDA
+
+Latent Dirichlet allocation is one of the most common algorithms for topic modeling. Without diving into the math behind the model, we can understand it as being guided by two principles.
+
+- Every topic is a mixture of words
+- Every document is a mixture of topics
+
+```{r}
+library(topicmodels)
+```
+
+We want to allocate the topics and documents into 4 different topics.
+```{r}
+news_lda <- LDA(
+  cast_dtm(news_tokens, id, word, n), 
+  k = 4,
+  control = list(seed = 1234))
+```
+
+### Word-topic probabilities
+
+The following table shows the probability of a specific term occurring in a topic.
+
+```{r}
+tidy(news_lda, matrix = "beta") %>% 
+  group_by(topic) %>% 
+  top_n(10, beta) %>% 
+  arrange(topic, desc(beta))
+```
+
+### Document-topic probabilities
+
+The following table shows the probability of a specific topic occurring in a document.
+
+```{r}
+# t is the variable `alpha` on the wikipedia page of LDA
+tidy(news_lda, matrix = "gamma") %>%
+    pivot_wider(names_from = topic, values_from = gamma)
+```
+
+```{r}
+tidy(news_lda, "gamma") %>%
+  mutate(topic = as_factor(topic)) %>% 
+  ggplot(aes(topic, gamma, fill = topic)) + 
+  geom_bar(stat = "identity") + 
+  facet_wrap(~document, 4) + 
+  coord_flip()
+```
+
+
+
+## CTM
+
+Correlated topic model is an extension of LDA which supports correlations between topics.
+
+```{r}
+news_ctm <- CTM(
+  cast_dtm(news_tokens, id, word, n), 
+  k = 4, 
+  control = list(seed = 1234) )
+```
+
+```{r}
+tidy(news_ctm, matrix = "beta") %>% 
+  group_by(topic) %>% 
+  top_n(10, beta) %>% 
+  arrange(topic, desc(beta))
+```
+
+```{r}
+tidy(news_ctm, "gamma") %>%
+  mutate(topic = as_factor(topic)) %>% 
+  ggplot(aes(topic, gamma, fill = topic)) + 
+  geom_bar(stat = "identity") + 
+  facet_wrap(~document, 4) + 
+  coord_flip()
+```
+
+
+
+# Reference:
+
+- Tidytext: https://www.tidytextmining.com/
