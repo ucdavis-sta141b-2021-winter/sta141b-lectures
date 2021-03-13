@@ -29,6 +29,14 @@ Your grade will be determined based on the following criterion.
 
 ## How to submit
 
-To be announced.
-
 Due date: Mar 17 11:59 pm
+
+Please submit the following to the email address <submitsta141b@gmail.com> using your UCD email.
+
+1. Your name and student id
+
+2. A single R file or if you have multiple files, a zip file containing all the files (you don't have to submit the .Renviron file). Optionally, you could also push your source code to github.
+
+3. The deployment url for your app
+
+
